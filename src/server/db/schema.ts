@@ -87,11 +87,7 @@ export const verificationTokens = createTable(
 );
 
 export const bases = createTable("base", (d) => ({
-  id: d
-    .varchar({ length: 255 })
-    .notNull()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
   name: d.varchar({ length: 255 }).notNull(),
   ownerId: d
     .varchar({ length: 255 })
@@ -100,14 +96,10 @@ export const bases = createTable("base", (d) => ({
 }));
 
 export const airtables = createTable("airtable", (d) => ({
-  id: d
-    .varchar({ length: 255 })
-    .notNull()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
   name: d.varchar({ length: 255 }).notNull(),
   baseId: d
-    .varchar({ length: 255 })
+    .uuid()
     .notNull()
     .references(() => bases.id),
 }));
