@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { House, Share2, Star, Share, Plus, Store } from "lucide-react";
 import { api } from "@/trpc/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 function MenuItem({
   name,
@@ -46,9 +46,11 @@ function MenuItem({
 }
 
 export default function MenuBar() {
+  const router = useRouter();
+
   const createBase = api.bases.create.useMutation({
     onSuccess: (baseId) => {
-      redirect(`/bases/${baseId}`);
+      router.push(`/bases/${baseId}`);
     },
   });
 
