@@ -10,27 +10,6 @@ import { type AdapterAccount } from "next-auth/adapters";
  */
 export const createTable = pgTableCreator((name) => `airtable-clone_${name}`);
 
-export const posts = createTable(
-  "post",
-  (d) => ({
-    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
-    name: d.varchar({ length: 256 }),
-    createdById: d
-      .varchar({ length: 255 })
-      .notNull()
-      .references(() => users.id),
-    createdAt: d
-      .timestamp({ withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
-  }),
-  (t) => [
-    index("created_by_idx").on(t.createdById),
-    index("name_idx").on(t.name),
-  ],
-);
-
 export const users = createTable("user", (d) => ({
   id: d
     .varchar({ length: 255 })
@@ -106,3 +85,21 @@ export const verificationTokens = createTable(
   }),
   (t) => [primaryKey({ columns: [t.identifier, t.token] })],
 );
+
+export const bases = createTable("base", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  name: d.varchar({ length: 255 }).notNull(),
+  ownerId: d
+    .varchar({ length: 255 })
+    .notNull()
+    .references(() => users.id),
+}));
+
+export const airtables = createTable("airtable", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  name: d.varchar({ length: 255 }).notNull(),
+  baseId: d
+    .uuid()
+    .notNull()
+    .references(() => bases.id),
+}));
