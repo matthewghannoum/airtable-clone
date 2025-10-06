@@ -1,5 +1,6 @@
 import { auth } from "@/server/auth";
 import MenuBar from "../_components/MenuBar";
+import { redirect } from "next/navigation";
 
 export default async function BasesLayout({
   children,
@@ -8,7 +9,7 @@ export default async function BasesLayout({
 }) {
   const session = await auth();
 
-  if (!session) return null;
+  if (!session) redirect("/");
 
   return (
     <div className="flex h-screen flex-col bg-neutral-100">
