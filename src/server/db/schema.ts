@@ -85,3 +85,29 @@ export const verificationTokens = createTable(
   }),
   (t) => [primaryKey({ columns: [t.identifier, t.token] })],
 );
+
+export const bases = createTable("base", (d) => ({
+  id: d
+    .varchar({ length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: d.varchar({ length: 255 }).notNull(),
+  ownerId: d
+    .varchar({ length: 255 })
+    .notNull()
+    .references(() => users.id),
+}));
+
+export const airtables = createTable("airtable", (d) => ({
+  id: d
+    .varchar({ length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: d.varchar({ length: 255 }).notNull(),
+  baseId: d
+    .varchar({ length: 255 })
+    .notNull()
+    .references(() => bases.id),
+}));
