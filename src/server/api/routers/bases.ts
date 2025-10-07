@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { airtables, bases } from "@/server/db/schema";
+import { airtableColumns, airtables, bases } from "@/server/db/schema";
 
 export const basesRouter = createTRPCRouter({
   create: protectedProcedure.mutation(async ({ ctx }) => {
@@ -25,6 +25,27 @@ export const basesRouter = createTRPCRouter({
         name: "Table 1",
         baseId: baseRow.id,
       });
+
+      await tx.insert(airtableColumns).values([
+        {
+          name: "Name",
+          type: "text",
+          displayOrderNum: 1,
+          airtableId: baseRow.id,
+        },
+        {
+          name: "Notes",
+          type: "text",
+          displayOrderNum: 2,
+          airtableId: baseRow.id,
+        },
+        {
+          name: "Number of PRs",
+          type: "number",
+          displayOrderNum: 3,
+          airtableId: baseRow.id,
+        },
+      ]);
 
       return baseRow.id;
     });
