@@ -38,31 +38,48 @@ export const basesRouter = createTRPCRouter({
         throw new Error("Failed to create airtable");
       }
 
-      await tx.insert(airtableColumns).values([
-        {
-          name: "Name",
-          type: "text",
-          displayOrderNum: 1,
-          airtableId: airtableRow.id,
-        },
-        {
-          name: "Notes",
-          type: "text",
-          displayOrderNum: 2,
-          airtableId: airtableRow.id,
-        },
-        {
-          name: "Number of PRs",
-          type: "number",
-          displayOrderNum: 3,
-          airtableId: airtableRow.id,
-        },
-      ]);
+      const columnRows = await tx
+        .insert(airtableColumns)
+        .values([
+          {
+            name: "Name",
+            type: "text",
+            displayOrderNum: 1,
+            airtableId: airtableRow.id,
+          },
+          {
+            name: "Notes",
+            type: "text",
+            displayOrderNum: 2,
+            airtableId: airtableRow.id,
+          },
+          {
+            name: "Number of PRs",
+            type: "number",
+            displayOrderNum: 3,
+            airtableId: airtableRow.id,
+          },
+        ])
+        .returning();
+
+      const nameId = columnRows.find((col) => col.name === "Name")?.id;
+      const notesId = columnRows.find((col) => col.name === "Notes")?.id;
+      const numberOfPrsId = columnRows.find(
+        (col) => col.name === "Number of PRs",
+      )?.id;
+
+      if (!nameId || !notesId || !numberOfPrsId) {
+        throw new Error("Failed to create columns");
+      }
 
       await tx.insert(airtableRows).values([
         {
           airtableId: airtableRow.id,
-          values: { Name: "John Smith", Notes: "JS Dev.", "Number of PRs": 5 },
+          values: {
+            [nameId]: "John Smith",
+            [notesId]: "JS Dev.",
+            [numberOfPrsId]: 5,
+          },
         },
       ]);
 
