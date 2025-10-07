@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { Tally5, TextInitial } from "lucide-react";
+import { Check, Tally5, TextInitial } from "lucide-react";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const { data: tableData } = api.table.get.useQuery({ tableId });
@@ -37,6 +38,10 @@ export default function Airtable({ tableId }: { tableId: string }) {
       <TableHeader>
         {table.getHeaderGroups().map((hg) => (
           <TableRow key={hg.id}>
+            <TableHead>
+              <Checkbox />
+            </TableHead>
+
             {hg.headers.map((header, index) => (
               <TableHead
                 key={header.id}
@@ -65,8 +70,12 @@ export default function Airtable({ tableId }: { tableId: string }) {
         ))}
       </TableHeader>
       <TableBody className="border-b border-neutral-300">
-        {table.getRowModel().rows.map((row) => (
+        {table.getRowModel().rows.map((row, rowIndex) => (
           <TableRow key={row.id}>
+            <TableCell>
+              <p className="ml-1">{rowIndex + 1}</p>
+            </TableCell>
+
             {row.getVisibleCells().map((cell, index) => (
               <TableCell
                 key={cell.id}
