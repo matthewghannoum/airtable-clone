@@ -1,13 +1,18 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { airtableColumns, airtables, bases } from "@/server/db/schema";
+import {
+  airtableColumns,
+  airtableRows,
+  airtables,
+  bases,
+} from "@/server/db/schema";
 
 export const basesRouter = createTRPCRouter({
   create: protectedProcedure.mutation(async ({ ctx }) => {
     const { user } = ctx.session;
 
-    const baseId = await ctx.db.transaction(async (tx) => {
+    const { baseId, tableId } = await ctx.db.transaction(async (tx) => {
       // Type assertion for the returned row, adjust as per your schema
       const [baseRow] = await tx
         .insert(bases)
@@ -21,35 +26,49 @@ export const basesRouter = createTRPCRouter({
         throw new Error("Failed to create base");
       }
 
-      await tx.insert(airtables).values({
-        name: "Table 1",
-        baseId: baseRow.id,
-      });
+      const [airtableRow] = await tx
+        .insert(airtables)
+        .values({
+          name: "Table 1",
+          baseId: baseRow.id,
+        })
+        .returning();
+
+      if (!airtableRow) {
+        throw new Error("Failed to create airtable");
+      }
 
       await tx.insert(airtableColumns).values([
         {
           name: "Name",
           type: "text",
           displayOrderNum: 1,
-          airtableId: baseRow.id,
+          airtableId: airtableRow.id,
         },
         {
           name: "Notes",
           type: "text",
           displayOrderNum: 2,
-          airtableId: baseRow.id,
+          airtableId: airtableRow.id,
         },
         {
           name: "Number of PRs",
           type: "number",
           displayOrderNum: 3,
-          airtableId: baseRow.id,
+          airtableId: airtableRow.id,
         },
       ]);
 
-      return baseRow.id;
+      await tx.insert(airtableRows).values([
+        {
+          airtableId: airtableRow.id,
+          values: { Name: "John Smith", Notes: "JS Dev.", "Number of PRs": 5 },
+        },
+      ]);
+
+      return { baseId: baseRow.id, tableId: airtableRow.id };
     });
 
-    return baseId;
+    return { baseId, tableId };
   }),
 });
