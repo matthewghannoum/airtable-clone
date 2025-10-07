@@ -49,8 +49,8 @@ export default function MenuBar() {
   const router = useRouter();
 
   const createBase = api.bases.create.useMutation({
-    onSuccess: (baseId) => {
-      router.push(`/bases/${baseId}`);
+    onSuccess: ({ baseId, tableId }) => {
+      router.push(`/bases/${baseId}/${tableId}`);
     },
   });
 
