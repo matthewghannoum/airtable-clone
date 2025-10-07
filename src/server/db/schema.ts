@@ -109,7 +109,10 @@ export const airtableColumns = createTable("at_column", (d) => ({
   name: d.varchar({ length: 255 }).notNull(),
   type: d.text({ enum: ["text", "number"] }).notNull(),
   displayOrderNum: d.integer().notNull(),
-  airtableId: d.uuid().notNull(),
+  airtableId: d
+    .uuid()
+    .notNull()
+    .references(() => airtables.id),
 }));
 
 export const airtableRows = createTable("at_row", (d) => ({
