@@ -103,3 +103,20 @@ export const airtables = createTable("airtable", (d) => ({
     .notNull()
     .references(() => bases.id),
 }));
+
+export const airtableColumns = createTable("at_column", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  name: d.varchar({ length: 255 }).notNull(),
+  type: d.text({ enum: ["text", "number"] }).notNull(),
+  displayOrderNum: d.integer().notNull(),
+  airtableId: d.uuid().notNull(),
+}));
+
+export const airtableRows = createTable("at_row", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  values: d.jsonb().notNull(),
+  airtableId: d
+    .uuid()
+    .notNull()
+    .references(() => airtables.id),
+}));
