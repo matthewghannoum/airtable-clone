@@ -6,7 +6,7 @@ export default async function Page(
   const { baseId, tableId } = await props.params;
 
   return (
-    <div>
+    <div className="w-full">
       <Airtable tableId={tableId} />
     </div>
   );
