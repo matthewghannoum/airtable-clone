@@ -27,10 +27,7 @@ export default async function BasesLayout({
       <div className="flex h-full items-start justify-items-start">
         <MenuBar />
 
-        <div className="w-full px-12 py-8">
-          <h1 className="mb-6 text-2xl font-semibold tracking-wide">Home</h1>
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
