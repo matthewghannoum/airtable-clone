@@ -16,15 +16,16 @@ import {
 } from "@tanstack/react-table";
 
 export default function Airtable({ tableId }: { tableId: string }) {
-  const { data: columnData = [] } = api.table.getColumns.useQuery({ tableId });
-  const { data: rows = [] } = api.table.getRows.useQuery({ tableId });
+  const { data: tableData } = api.table.get.useQuery({ tableId });
 
-  const columns = columnData.map((col) => ({
-    accessorKey: col.id,
-    header: col.name,
-  }));
+  const columns = tableData
+    ? tableData.columns.map((col) => ({
+        accessorKey: col.id,
+        header: col.name,
+      }))
+    : [];
 
-  console.log(rows);
+  const rows = tableData ? tableData.rows : [];
 
   const table = useReactTable({
     data: rows,
