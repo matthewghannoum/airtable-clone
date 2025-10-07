@@ -15,7 +15,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { Check, Tally5, TextInitial } from "lucide-react";
+import { Tally5, TextInitial, Plus } from "lucide-react";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const { data: tableData } = api.table.get.useQuery({ tableId });
@@ -90,6 +90,17 @@ export default function Airtable({ tableId }: { tableId: string }) {
             ))}
           </TableRow>
         ))}
+
+        <TableRow className="cursor-pointer">
+          <TableCell>
+            <Plus size={15} />
+          </TableCell>
+          {tableData?.columns.map((_, index) => (
+            <TableCell key={index} className="p-2">
+              <p className="invisible">a</p>
+            </TableCell>
+          ))}
+        </TableRow>
       </TableBody>
     </Table>
   );
