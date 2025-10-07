@@ -28,7 +28,7 @@ export default async function BaseLayout(
   }
 
   return (
-    <div className="h-full w-full p-8">
+    <div className="h-full w-full p-4">
       <div className="h-full w-full rounded-md bg-white shadow">
         <div className="w-full border-b-1 border-neutral-300 px-4 py-2">
           <h1 className="text-md font-semibold">{base.name}</h1>
