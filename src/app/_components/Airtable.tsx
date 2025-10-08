@@ -16,6 +16,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { Tally5, TextInitial, Plus } from "lucide-react";
+import { useState } from "react";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
@@ -23,6 +24,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
   const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
+
   const createEmptyRow = api.table.createEmptyRow.useMutation({
     onMutate: async () => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
@@ -64,6 +66,11 @@ export default function Airtable({ tableId }: { tableId: string }) {
       : [],
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const [isCellEditing, setIsCellEditing] = useState<{
+    rowIndex: number;
+    columnId: string;
+  } | null>(null);
 
   return (
     <Table className="w-full border-collapse bg-white">
@@ -111,13 +118,32 @@ export default function Airtable({ tableId }: { tableId: string }) {
             {row.getVisibleCells().map((cell, index) => (
               <TableCell
                 key={cell.id}
-                className={
+                className={`${
                   index !== row.getVisibleCells().length - 1
                     ? "border-r border-neutral-300"
                     : ""
+                }`}
+                onClick={() =>
+                  setIsCellEditing({ rowIndex, columnId: cell.column.id })
                 }
               >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                {isCellEditing?.rowIndex === rowIndex &&
+                isCellEditing?.columnId === cell.column.id ? (
+                  <input
+                    autoFocus
+                    className="bg-transparent outline-none"
+                    type={
+                      tableData?.columns.find(
+                        (col) => col.id === cell.column.id,
+                      )?.type === "number"
+                        ? "number"
+                        : "text"
+                    }
+                    defaultValue={cell.getValue() as string | number}
+                  />
+                ) : (
+                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                )}
               </TableCell>
             ))}
           </TableRow>
