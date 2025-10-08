@@ -22,11 +22,15 @@ export const tableRouter = createTRPCRouter({
         rows: rows.map((row) => row.values),
       };
     }),
-  addRow: protectedProcedure
+  updateRow: protectedProcedure
     .input(
       z.object({
         tableId: z.string(),
-        values: z.record(z.string(), z.union([z.string(), z.number()])),
+        rowId: z.string(),
+        values: z.record(
+          z.string(),
+          z.union([z.string(), z.number(), z.null()]),
+        ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -47,6 +51,8 @@ export const tableRouter = createTRPCRouter({
           throw new Error(`Unknown column ID: ${columnId}`);
         }
 
+        if (value === null) continue;
+
         if (expectedType === "number" && !z.number().safeParse(value).success) {
           throw new Error(`Expected number for column ${columnId}`);
         }
@@ -57,11 +63,9 @@ export const tableRouter = createTRPCRouter({
       }
 
       const [row] = await ctx.db
-        .insert(airtableRows)
-        .values({
-          airtableId: input.tableId,
-          values: input.values,
-        })
+        .update(airtableRows)
+        .set({ values: input.values })
+        .where(eq(airtableRows.id, input.rowId))
         .returning();
 
       if (!row) {
