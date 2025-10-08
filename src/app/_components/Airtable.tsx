@@ -18,7 +18,10 @@ import {
 import { Tally5, TextInitial, Plus } from "lucide-react";
 
 export default function Airtable({ tableId }: { tableId: string }) {
-  const { data: tableData } = api.table.get.useQuery({ tableId });
+  // For now the entire table will be refetched
+  // TODO: Create a row component that fetches and updates its own data
+  const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
+  const createEmptyRow = api.table.createEmptyRow.useMutation();
 
   const rows = tableData ? tableData.rows : [];
 
@@ -91,7 +94,19 @@ export default function Airtable({ tableId }: { tableId: string }) {
           </TableRow>
         ))}
 
-        <TableRow className="cursor-pointer">
+        <TableRow
+          className="cursor-pointer"
+          onClick={() => {
+            createEmptyRow
+              .mutateAsync({ tableId })
+              .then(async () => {
+                await refetch();
+              })
+              .catch((err) => {
+                console.error(err);
+              });
+          }}
+        >
           <TableCell>
             <Plus size={15} />
           </TableCell>
