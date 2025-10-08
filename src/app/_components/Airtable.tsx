@@ -18,10 +18,39 @@ import {
 import { Tally5, TextInitial, Plus } from "lucide-react";
 
 export default function Airtable({ tableId }: { tableId: string }) {
+  const utils = api.useUtils();
+
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
   const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
-  const createEmptyRow = api.table.createEmptyRow.useMutation();
+  const createEmptyRow = api.table.createEmptyRow.useMutation({
+    onMutate: async () => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.get.cancel({ tableId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.get.getData({ tableId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        const emptyRow = tableData?.columns.reduce(
+          (acc, col) => {
+            acc[col.id] = null;
+            return acc;
+          },
+          {} as Record<string, null>,
+        );
+
+        utils.table.get.setData({ tableId }, () => ({
+          columns: prev.columns,
+          rows: [...prev.rows, emptyRow],
+        }));
+      }
+
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+  });
 
   const rows = tableData ? tableData.rows : [];
 
