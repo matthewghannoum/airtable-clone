@@ -4,6 +4,33 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const tableRouter = createTRPCRouter({
+  createEmptyRow: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const columns = await ctx.db
+        .select()
+        .from(airtableColumns)
+        .where(eq(airtableColumns.airtableId, input.tableId));
+
+      const values: Record<string, null> = {};
+      for (const column of columns) {
+        values[column.id] = null;
+      }
+
+      const [newRow] = await ctx.db
+        .insert(airtableRows)
+        .values({
+          airtableId: input.tableId,
+          values,
+        })
+        .returning();
+
+      return newRow;
+    }),
   get: protectedProcedure
     .input(z.object({ tableId: z.string() }))
     .query(async ({ ctx, input }) => {
