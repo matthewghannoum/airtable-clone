@@ -1,7 +1,17 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import type { AnyColumn } from "drizzle-orm";
 import { z } from "zod";
+
+function jsonbSet(column: AnyColumn, key: string, value: unknown) {
+  return sql`jsonb_set(
+    ${column},
+    ARRAY[${key}]::text[],
+    ${JSON.stringify(value)}::jsonb,
+    true
+  )`;
+}
 
 export const tableRouter = createTRPCRouter({
   createEmptyRow: protectedProcedure
@@ -40,24 +50,24 @@ export const tableRouter = createTRPCRouter({
         .where(eq(airtableColumns.airtableId, input.tableId));
 
       const rows = await ctx.db
-        .select({ values: airtableRows.values })
+        .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
-        .where(eq(airtableRows.airtableId, input.tableId));
+        .where(eq(airtableRows.airtableId, input.tableId))
+        .orderBy(airtableRows.createdTimestamp);
 
       return {
         columns,
         rows: rows.map((row) => row.values),
+        rowIds: rows.map((row) => row.id),
       };
     }),
-  updateRow: protectedProcedure
+  updateCell: protectedProcedure
     .input(
       z.object({
         tableId: z.string(),
         rowId: z.string(),
-        values: z.record(
-          z.string(),
-          z.union([z.string(), z.number(), z.null()]),
-        ),
+        columnId: z.string(),
+        cellValue: z.union([z.string(), z.number(), z.null()]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -71,28 +81,42 @@ export const tableRouter = createTRPCRouter({
         columnIdToType[column.id] = column.type;
       }
 
-      for (const [columnId, value] of Object.entries(input.values)) {
-        const expectedType = columnIdToType[columnId];
+      const columnId = input.columnId;
+      const cellValue = input.cellValue;
 
-        if (!expectedType) {
-          throw new Error(`Unknown column ID: ${columnId}`);
-        }
+      const expectedType = columnIdToType[columnId];
 
-        if (value === null) continue;
+      if (!expectedType) {
+        throw new Error(`Unknown column ID: ${columnId}`);
+      }
 
-        if (expectedType === "number" && !z.number().safeParse(value).success) {
+      if (cellValue !== null) {
+        if (
+          expectedType === "number" &&
+          !z.number().safeParse(cellValue).success
+        ) {
           throw new Error(`Expected number for column ${columnId}`);
         }
 
-        if (expectedType === "text" && !z.string().safeParse(value).success) {
+        if (
+          expectedType === "text" &&
+          !z.string().safeParse(cellValue).success
+        ) {
           throw new Error(`Expected string for column ${columnId}`);
         }
       }
 
       const [row] = await ctx.db
         .update(airtableRows)
-        .set({ values: input.values })
-        .where(eq(airtableRows.id, input.rowId))
+        .set({
+          values: jsonbSet(airtableRows.values, columnId, cellValue),
+        })
+        .where(
+          and(
+            eq(airtableRows.airtableId, input.tableId),
+            eq(airtableRows.id, input.rowId),
+          ),
+        )
         .returning();
 
       if (!row) {
@@ -122,7 +146,7 @@ export const tableRouter = createTRPCRouter({
       const cleanedRows = rows
         .filter((row) => columnIdToType[row.id])
         .map((row) => {
-          const values = row.values as Record<string, string | number | null>;
+          const values = row.values;
 
           for (const { id: columnId } of columns) {
             values[columnId] ??= null;
