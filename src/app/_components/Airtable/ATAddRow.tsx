@@ -24,7 +24,7 @@ export default function ATAddRow({
 
       // 3) update cache optimistically
       if (prev) {
-        const emptyRow = tableData?.columns.reduce(
+        const emptyRow = columns.reduce(
           (acc, col) => {
             acc[col.id] = null;
             return acc;
