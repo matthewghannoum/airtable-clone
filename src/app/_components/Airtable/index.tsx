@@ -18,10 +18,11 @@ export default function Airtable({ tableId }: { tableId: string }) {
   // TODO: Create a row component that fetches and updates its own data
   const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
 
-  const rows = tableData ? tableData.rows : [];
+  const rowValues = tableData ? tableData.rows : [];
+  const rowIds = tableData ? tableData.rowIds : [];
 
   const table = useReactTable({
-    data: rows,
+    data: rowValues,
     columns: tableData
       ? tableData.columns.map((col) => ({
           accessorKey: col.id,
@@ -29,11 +30,13 @@ export default function Airtable({ tableId }: { tableId: string }) {
         }))
       : [],
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (_, index) => rowIds[index] ?? index.toString(),
   });
 
-  const [isCellEditing, setIsCellEditing] = useState<{
-    rowIndex: number;
+  const [editingCell, setEditingCell] = useState<{
+    rowId: string;
     columnId: string;
+    cellValue?: string | number | null;
   } | null>(null);
 
   const updateCell = api.table.updateCell.useMutation({
@@ -48,8 +51,8 @@ export default function Airtable({ tableId }: { tableId: string }) {
 
       // 3) update cache optimistically
       if (prev) {
-        const newRows = prev.rows.map((row) => {
-          if (rowId === row.id) {
+        const newRows = prev.rows.map((row, index) => {
+          if (rowId === rowIds[index]) {
             return {
               ...row,
               [columnId]: cellValue,
@@ -61,6 +64,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
         utils.table.get.setData({ tableId }, () => ({
           columns: prev.columns,
           rows: newRows,
+          rowIds: prev.rowIds,
         }));
       }
 
@@ -100,11 +104,11 @@ export default function Airtable({ tableId }: { tableId: string }) {
                     : ""
                 }`}
                 onClick={() =>
-                  setIsCellEditing({ rowIndex, columnId: cell.column.id })
+                  setEditingCell({ rowId: row.id, columnId: cell.column.id })
                 }
               >
-                {isCellEditing?.rowIndex === rowIndex &&
-                isCellEditing?.columnId === cell.column.id ? (
+                {editingCell?.rowId === row.id &&
+                editingCell?.columnId === cell.column.id ? (
                   <input
                     autoFocus
                     className="bg-transparent outline-none"
@@ -116,6 +120,39 @@ export default function Airtable({ tableId }: { tableId: string }) {
                         : "text"
                     }
                     defaultValue={cell.getValue() as string | number}
+                    onChange={(e) => {
+                      const value =
+                        e.target.value === ""
+                          ? null
+                          : tableData?.columns.find(
+                                (col) => col.id === cell.column.id,
+                              )?.type === "number"
+                            ? Number(e.target.value)
+                            : e.target.value;
+
+                      setEditingCell({
+                        rowId: row.id,
+                        columnId: cell.column.id,
+                        cellValue: value,
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" &&
+                        editingCell?.cellValue !== undefined
+                      ) {
+                        updateCell.mutate({
+                          tableId,
+                          rowId: editingCell.rowId,
+                          columnId: editingCell.columnId,
+                          cellValue: editingCell.cellValue,
+                        });
+                        setEditingCell(null);
+                      }
+                      if (e.key === "Escape") {
+                        setEditingCell(null);
+                      }
+                    }}
                   />
                 ) : (
                   flexRender(cell.column.columnDef.cell, cell.getContext())
