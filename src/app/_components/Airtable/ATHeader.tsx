@@ -2,13 +2,13 @@ import { flexRender, type Table } from "@tanstack/react-table";
 import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tally5, TextInitial } from "lucide-react";
-import type { Column, TableData } from "../types";
+import type { Column } from "../types";
 
 export default function ATHeader({
   table,
   columns,
 }: {
-  table: Table<unknown>;
+  table: Table<Record<string, string | number | null>>;
   columns: Column[];
 }) {
   return (
