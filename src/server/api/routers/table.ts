@@ -52,7 +52,8 @@ export const tableRouter = createTRPCRouter({
       const rows = await ctx.db
         .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
-        .where(eq(airtableRows.airtableId, input.tableId));
+        .where(eq(airtableRows.airtableId, input.tableId))
+        .orderBy(airtableRows.createdTimestamp);
 
       return {
         columns,
