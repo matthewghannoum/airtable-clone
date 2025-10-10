@@ -117,7 +117,7 @@ export const airtableColumns = createTable("at_column", (d) => ({
 
 export const airtableRows = createTable("at_row", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
-  values: d.jsonb().notNull(),
+  values: d.jsonb().$type<Record<string, string | number | null>>().notNull(),
   airtableId: d
     .uuid()
     .notNull()
