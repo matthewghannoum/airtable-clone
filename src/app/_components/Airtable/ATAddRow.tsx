@@ -35,6 +35,7 @@ export default function ATAddRow({
         utils.table.get.setData({ tableId }, () => ({
           columns: prev.columns,
           rows: [...prev.rows, emptyRow],
+          rowIds: [...prev.rowIds, "temp-id"],
         }));
       }
 
