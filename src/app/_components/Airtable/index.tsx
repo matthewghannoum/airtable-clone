@@ -102,6 +102,11 @@ export default function Airtable({ tableId }: { tableId: string }) {
                   index !== row.getVisibleCells().length - 1
                     ? "border-r border-neutral-300"
                     : ""
+                } ${
+                  editingCell?.rowId === row.id &&
+                  editingCell?.columnId === cell.column.id
+                    ? "border-2 border-blue-500 bg-white"
+                    : ""
                 }`}
                 onClick={() =>
                   setEditingCell({ rowId: row.id, columnId: cell.column.id })
@@ -111,7 +116,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
                 editingCell?.columnId === cell.column.id ? (
                   <input
                     autoFocus
-                    className="bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none"
                     type={
                       tableData?.columns.find(
                         (col) => col.id === cell.column.id,
@@ -155,7 +160,9 @@ export default function Airtable({ tableId }: { tableId: string }) {
                     }}
                   />
                 ) : (
-                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                  <div className="w-full">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
                 )}
               </TableCell>
             ))}
