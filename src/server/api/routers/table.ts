@@ -1,6 +1,6 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import { z } from "zod";
 
@@ -50,13 +50,14 @@ export const tableRouter = createTRPCRouter({
         .where(eq(airtableColumns.airtableId, input.tableId));
 
       const rows = await ctx.db
-        .select({ values: airtableRows.values })
+        .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
         .where(eq(airtableRows.airtableId, input.tableId));
 
       return {
         columns,
         rows: rows.map((row) => row.values),
+        rowIds: rows.map((row) => row.id),
       };
     }),
   updateCell: protectedProcedure
@@ -104,20 +105,17 @@ export const tableRouter = createTRPCRouter({
         }
       }
 
-      // const [row] = await ctx.db
-      //   .update(airtableRows)
-      //   .set({
-      //     values: sql`jsonb_set(${airtableRows.values}, ${sql.raw(`'{${columnId}}'`)}, ${sql.raw(`'${cellValue}'`)}, true)`,
-      //   })
-      //   .where(eq(airtableRows.id, input.rowId))
-      //   .returning();
-
       const [row] = await ctx.db
         .update(airtableRows)
         .set({
           values: jsonbSet(airtableRows.values, columnId, cellValue),
         })
-        .where(eq(airtableRows.airtableId, input.tableId))
+        .where(
+          and(
+            eq(airtableRows.airtableId, input.tableId),
+            eq(airtableRows.id, input.rowId),
+          ),
+        )
         .returning();
 
       if (!row) {
@@ -147,7 +145,7 @@ export const tableRouter = createTRPCRouter({
       const cleanedRows = rows
         .filter((row) => columnIdToType[row.id])
         .map((row) => {
-          const values = row.values as Record<string, string | number | null>;
+          const values = row.values;
 
           for (const { id: columnId } of columns) {
             values[columnId] ??= null;
