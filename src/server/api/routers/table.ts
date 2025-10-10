@@ -1,7 +1,17 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import type { AnyColumn } from "drizzle-orm";
 import { z } from "zod";
+
+function jsonbSet(column: AnyColumn, key: string, value: unknown) {
+  return sql`jsonb_set(
+    ${column},
+    ARRAY[${key}]::text[],
+    ${JSON.stringify(value)}::jsonb,
+    true
+  )`;
+}
 
 export const tableRouter = createTRPCRouter({
   createEmptyRow: protectedProcedure
@@ -49,15 +59,13 @@ export const tableRouter = createTRPCRouter({
         rows: rows.map((row) => row.values),
       };
     }),
-  updateRow: protectedProcedure
+  updateCell: protectedProcedure
     .input(
       z.object({
         tableId: z.string(),
         rowId: z.string(),
-        values: z.record(
-          z.string(),
-          z.union([z.string(), z.number(), z.null()]),
-        ),
+        columnId: z.string(),
+        cellValue: z.union([z.string(), z.number(), z.null()]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -71,28 +79,45 @@ export const tableRouter = createTRPCRouter({
         columnIdToType[column.id] = column.type;
       }
 
-      for (const [columnId, value] of Object.entries(input.values)) {
-        const expectedType = columnIdToType[columnId];
+      const columnId = input.columnId;
+      const cellValue = input.cellValue;
 
-        if (!expectedType) {
-          throw new Error(`Unknown column ID: ${columnId}`);
-        }
+      const expectedType = columnIdToType[columnId];
 
-        if (value === null) continue;
+      if (!expectedType) {
+        throw new Error(`Unknown column ID: ${columnId}`);
+      }
 
-        if (expectedType === "number" && !z.number().safeParse(value).success) {
+      if (cellValue !== null) {
+        if (
+          expectedType === "number" &&
+          !z.number().safeParse(cellValue).success
+        ) {
           throw new Error(`Expected number for column ${columnId}`);
         }
 
-        if (expectedType === "text" && !z.string().safeParse(value).success) {
+        if (
+          expectedType === "text" &&
+          !z.string().safeParse(cellValue).success
+        ) {
           throw new Error(`Expected string for column ${columnId}`);
         }
       }
 
+      // const [row] = await ctx.db
+      //   .update(airtableRows)
+      //   .set({
+      //     values: sql`jsonb_set(${airtableRows.values}, ${sql.raw(`'{${columnId}}'`)}, ${sql.raw(`'${cellValue}'`)}, true)`,
+      //   })
+      //   .where(eq(airtableRows.id, input.rowId))
+      //   .returning();
+
       const [row] = await ctx.db
         .update(airtableRows)
-        .set({ values: input.values })
-        .where(eq(airtableRows.id, input.rowId))
+        .set({
+          values: jsonbSet(airtableRows.values, columnId, cellValue),
+        })
+        .where(eq(airtableRows.airtableId, input.tableId))
         .returning();
 
       if (!row) {
