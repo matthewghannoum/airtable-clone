@@ -7,12 +7,13 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 
 export default function Airtable({ tableId }: { tableId: string }) {
+  const utils = api.useUtils();
+
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
   const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
@@ -34,6 +35,48 @@ export default function Airtable({ tableId }: { tableId: string }) {
     rowIndex: number;
     columnId: string;
   } | null>(null);
+
+  const updateCell = api.table.updateCell.useMutation({
+    onMutate: async (input) => {
+      const { rowId, columnId, cellValue } = input;
+
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.get.cancel({ tableId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.get.getData({ tableId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        const newRows = prev.rows.map((row) => {
+          if (rowId === row.id) {
+            return {
+              ...row,
+              [columnId]: cellValue,
+            };
+          }
+          return row;
+        });
+
+        utils.table.get.setData({ tableId }, () => ({
+          columns: prev.columns,
+          rows: newRows,
+        }));
+      }
+
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+    onError: (err, newTodo, context) => {
+      if (context?.prev) {
+        utils.table.get.setData({ tableId }, context.prev);
+      }
+    },
+    // Always refetch after error or success:
+    onSettled: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
 
   return (
     <Table className="w-full border-collapse bg-white">
