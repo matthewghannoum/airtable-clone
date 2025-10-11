@@ -10,7 +10,13 @@ import {
 import { useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
-import { Plus } from "lucide-react";
+import { Plus, Tally5, TextInitial } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import ATAddCol from "./ATAddCol";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
@@ -182,11 +188,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
         </TableBody>
       </Table>
 
-      <TableRow>
-        <div className="flex h-10 min-w-24 items-center justify-center">
-          <Plus />
-        </div>
-      </TableRow>
+      <ATAddCol />
     </div>
   );
 }
