@@ -33,7 +33,7 @@ export default async function BaseLayout(
     <div className="h-full w-full p-4">
       <div className="h-full w-full rounded-md bg-white shadow">
         <div className="flex w-full items-center justify-start gap-2 border-b-1 border-neutral-300 px-4 py-2">
-          <BaseTitle title={base.name} />
+          <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
         <div className="flex w-full justify-start bg-rose-100">
