@@ -14,20 +14,13 @@ export default function ATHeader({
   return (
     <TableHeader>
       {table.getHeaderGroups().map((hg) => (
-        <TableRow key={hg.id}>
+        <TableRow key={hg.id} className="hover:bg-transparent">
           <TableHead>
             <Checkbox />
           </TableHead>
 
-          {hg.headers.map((header, index) => (
-            <TableHead
-              key={header.id}
-              className={
-                index !== hg.headers.length - 1
-                  ? "border-r border-neutral-300"
-                  : ""
-              }
-            >
+          {hg.headers.map((header) => (
+            <TableHead key={header.id} className="border-r border-neutral-300">
               <div className="flex items-center justify-start gap-2">
                 {columns.find((col) => col.id === header.id)?.type ===
                 "text" ? (
