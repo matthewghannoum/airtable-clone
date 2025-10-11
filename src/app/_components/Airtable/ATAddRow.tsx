@@ -62,7 +62,10 @@ export default function ATAddRow({
         <Plus size={15} />
       </TableCell>
       {columns.map((_, index) => (
-        <TableCell key={index} className="p-2">
+        <TableCell
+          key={index}
+          className={`p-2 ${index === columns.length - 1 ? "border-r border-neutral-300" : ""}`}
+        >
           <p className="invisible">a</p>
         </TableCell>
       ))}

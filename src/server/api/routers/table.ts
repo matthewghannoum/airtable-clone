@@ -1,6 +1,6 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import { z } from "zod";
 
@@ -60,6 +60,34 @@ export const tableRouter = createTRPCRouter({
         rows: rows.map((row) => row.values),
         rowIds: rows.map((row) => row.id),
       };
+    }),
+  addColumn: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        name: z.string().min(1).max(100),
+        type: z.enum(["text", "number"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const maxOrderNum = ctx.db
+        .select({
+          maxOrderNum: max(airtableColumns.displayOrderNum),
+        })
+        .from(airtableColumns)
+        .where(eq(airtableColumns.airtableId, input.tableId));
+
+      const [newColumn] = await ctx.db
+        .insert(airtableColumns)
+        .values({
+          airtableId: input.tableId,
+          name: input.name,
+          type: input.type,
+          displayOrderNum: sql`COALESCE((${maxOrderNum}), 0) + 1`,
+        })
+        .returning();
+
+      return newColumn;
     }),
   updateCell: protectedProcedure
     .input(
