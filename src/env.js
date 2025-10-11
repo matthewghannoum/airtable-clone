@@ -1,5 +1,14 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { config as loadEnv } from "dotenv";
+
+// Let scripts pick which file to load
+
+loadEnv({ path: ".env" });
+
+if (process.env.DOTENV_CONFIG_PATH) {
+  loadEnv({ path: process.env.DOTENV_CONFIG_PATH, override: true });
+}
 
 export const env = createEnv({
   /**
