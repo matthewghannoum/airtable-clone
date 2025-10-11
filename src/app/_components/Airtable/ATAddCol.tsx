@@ -14,7 +14,7 @@ function ColOption({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex w-full items-center justify-start gap-2 p-1 hover:rounded-xs hover:bg-neutral-100">
+    <div className="flex w-full items-center justify-start gap-2 p-1 hover:rounded-sm hover:bg-neutral-100">
       {Icon}
       <p className="text-sm">{text}</p>
     </div>
