@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TableRow } from "@/components/ui/table";
+import { api } from "@/trpc/react";
 import { Plus, Tally5, TextInitial } from "lucide-react";
 import { useState } from "react";
 
@@ -37,12 +37,21 @@ function ColOption({
   );
 }
 
-export default function ATAddCol() {
+export default function ATAddCol({ tableId }: { tableId: string }) {
   const [isAddingCol, setIsAddingCol] = useState(false);
   const [colType, setColType] = useState<"text" | "number" | null>(null);
+  const [colName, setColName] = useState<string | null>(null);
+
+  const addCol = api.table.addColumn.useMutation({
+    onSuccess: () => {
+      setIsAddingCol(false);
+      setColType(null);
+      setColName(null);
+    },
+  });
 
   return (
-    <TableRow>
+    <div className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors">
       <div className="flex h-10 min-w-24">
         <Popover open={isAddingCol} onOpenChange={setIsAddingCol}>
           <PopoverTrigger className="flex w-full cursor-pointer items-center justify-center">
@@ -70,7 +79,12 @@ export default function ATAddCol() {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <Input className="w-full" autoFocus placeholder="Field name" />
+                <Input
+                  className="w-full"
+                  autoFocus
+                  placeholder="Field name"
+                  onChange={(e) => setColName(e.target.value)}
+                />
 
                 <Select
                   value={colType}
@@ -89,17 +103,20 @@ export default function ATAddCol() {
                 </Select>
 
                 <div className="flex w-full items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setColType(null);
-                      setIsAddingCol(false);
-                    }}
-                  >
+                  <Button variant="ghost" className="cursor-pointer">
                     Cancel
                   </Button>
-                  <Button className="cursor-pointer bg-blue-600 hover:bg-blue-700">
+                  <Button
+                    onClick={() => {
+                      if (colName)
+                        addCol.mutate({
+                          tableId,
+                          name: colName,
+                          type: colType,
+                        });
+                    }}
+                    className="cursor-pointer bg-blue-600 hover:bg-blue-700"
+                  >
                     Create field
                   </Button>
                 </div>
@@ -108,6 +125,6 @@ export default function ATAddCol() {
           </PopoverContent>
         </Popover>
       </div>
-    </TableRow>
+    </div>
   );
 }

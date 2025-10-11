@@ -10,12 +10,6 @@ import {
 import { useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
-import { Plus, Tally5, TextInitial } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import ATAddCol from "./ATAddCol";
 
 export default function Airtable({ tableId }: { tableId: string }) {
@@ -188,7 +182,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
         </TableBody>
       </Table>
 
-      <ATAddCol />
+      <ATAddCol tableId={tableId} />
     </div>
   );
 }
