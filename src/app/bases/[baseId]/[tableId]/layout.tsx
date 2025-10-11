@@ -1,6 +1,8 @@
+import BaseTitle from "@/app/_components/BaseTitle";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { SquarePen } from "lucide-react";
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
@@ -30,8 +32,8 @@ export default async function BaseLayout(
   return (
     <div className="h-full w-full p-4">
       <div className="h-full w-full rounded-md bg-white shadow">
-        <div className="w-full border-b-1 border-neutral-300 px-4 py-2">
-          <h1 className="text-md font-semibold">{base.name}</h1>
+        <div className="flex w-full items-center justify-start gap-2 border-b-1 border-neutral-300 px-4 py-2">
+          <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
         <div className="flex w-full justify-start bg-rose-100">
