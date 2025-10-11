@@ -38,11 +38,38 @@ function ColOption({
 }
 
 export default function ATAddCol({ tableId }: { tableId: string }) {
+  const utils = api.useUtils();
+
   const [isAddingCol, setIsAddingCol] = useState(false);
   const [colType, setColType] = useState<"text" | "number" | null>(null);
   const [colName, setColName] = useState<string | null>(null);
 
   const addCol = api.table.addColumn.useMutation({
+    onMutate: async (input) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.get.cancel({ tableId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.get.getData({ tableId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        const newCol = {
+          id: "temp-id",
+          name: input.name,
+          displayOrderNum: prev.columns.length,
+          type: input.type,
+          airtableId: tableId,
+        };
+
+        utils.table.get.setData({ tableId }, () => ({
+          columns: [...prev.columns, newCol],
+          rows: prev.rows,
+          rowIds: prev.rowIds,
+        }));
+      }
+    },
+
     onSuccess: () => {
       setIsAddingCol(false);
       setColType(null);
