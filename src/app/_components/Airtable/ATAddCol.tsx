@@ -75,6 +75,9 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
       setColType(null);
       setColName(null);
     },
+    onSettled: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
   });
 
   return (
