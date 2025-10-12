@@ -1,20 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import TablePopover from "./TablePopover";
+import { useState } from "react";
 
-export default function TableRow({
+export default function TableTabs({
   baseId,
   currentTableId,
-  tables,
+  currentTables,
 }: {
   baseId: string;
   currentTableId: string;
-  tables: { id: string; name: string }[];
+  currentTables: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const [tables, setTables] = useState(currentTables);
 
   return (
-    <>
+    <div className="flex w-full items-center justify-start bg-rose-50">
       {tables.map((table, index) => (
         <div
           key={table.id}
@@ -24,6 +27,8 @@ export default function TableRow({
           <h6 className="inline-block text-xs">{table.name}</h6>
         </div>
       ))}
-    </>
+
+      <TablePopover baseId={baseId} tables={tables} setTableTabs={setTables} />
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import BaseTitle from "@/app/_components/BaseTitle";
-import TablePopover from "@/app/_components/table-row/TablePopover";
-import TableRow from "@/app/_components/table-row/TableRow";
+import TablePopover from "@/app/_components/TableTabs/TablePopover";
+import TableRow from "@/app/_components/TableTabs";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { Table } from "lucide-react";
+import TableTabs from "@/app/_components/TableTabs";
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
@@ -37,11 +39,11 @@ export default async function BaseLayout(
           <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
-        <div className="flex w-full items-center justify-start bg-rose-50">
-          <TableRow baseId={baseId} currentTableId={tableId} tables={tables} />
-
-          <TablePopover baseId={baseId} tables={tables} />
-        </div>
+        <TableTabs
+          baseId={baseId}
+          currentTableId={tableId}
+          currentTables={tables}
+        />
 
         {children}
       </div>
