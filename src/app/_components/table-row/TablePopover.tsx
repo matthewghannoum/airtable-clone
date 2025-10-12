@@ -7,12 +7,17 @@ import {
 } from "@/components/ui/popover";
 import PopoverListItem from "../common/PopoverListItem";
 import { ChevronDown, Plus } from "lucide-react";
+import { api } from "@/trpc/react";
 
 export default function TablePopover({
+  baseId,
   tables,
 }: {
+  baseId: string;
   tables: { id: string; name: string }[];
 }) {
+  const addTable = api.bases.addTable.useMutation();
+
   return (
     <Popover>
       <PopoverTrigger className="ml-2 cursor-pointer">
@@ -29,7 +34,11 @@ export default function TablePopover({
 
         <hr className="w-full" />
 
-        <PopoverListItem text="Add table" icon={<Plus />} />
+        <PopoverListItem
+          text="Add table"
+          icon={<Plus />}
+          onClick={() => addTable.mutate({ baseId })}
+        />
       </PopoverContent>
     </Popover>
   );

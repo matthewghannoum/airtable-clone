@@ -46,7 +46,7 @@ export default async function BaseLayout(
             </div>
           ))}
 
-          <TablePopover tables={tables} />
+          <TablePopover baseId={baseId} tables={tables} />
         </div>
 
         {children}
