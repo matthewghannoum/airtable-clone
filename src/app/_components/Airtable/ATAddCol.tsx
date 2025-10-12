@@ -15,27 +15,7 @@ import {
 import { api } from "@/trpc/react";
 import { Plus, Tally5, TextInitial } from "lucide-react";
 import { useState } from "react";
-
-function ColOption({
-  text,
-  icon: Icon,
-  onClick,
-}: {
-  text: string;
-  icon: React.ReactNode;
-  onClick?: () => void;
-}) {
-  return (
-    <Button
-      onClick={onClick}
-      variant="ghost"
-      className="flex w-full cursor-pointer items-center justify-start gap-2"
-    >
-      {Icon}
-      <p className="text-sm">{text}</p>
-    </Button>
-  );
-}
+import PopoverListItem from "../common/PopoverListItem";
 
 export default function ATAddCol({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
@@ -96,12 +76,12 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
               <div className="flex flex-col gap-1">
                 <p className="mb-1 text-sm text-neutral-500">Standard fields</p>
 
-                <ColOption
+                <PopoverListItem
                   onClick={() => setColType("text")}
                   text="Text"
                   icon={<TextInitial size={15} />}
                 />
-                <ColOption
+                <PopoverListItem
                   onClick={() => setColType("number")}
                   text="Number"
                   icon={<Tally5 size={15} />}

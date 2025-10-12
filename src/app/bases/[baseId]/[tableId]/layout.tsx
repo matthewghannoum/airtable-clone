@@ -1,8 +1,8 @@
 import BaseTitle from "@/app/_components/BaseTitle";
+import TablePopover from "@/app/_components/table-row/TablePopover";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { SquarePen } from "lucide-react";
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
@@ -36,7 +36,7 @@ export default async function BaseLayout(
           <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
-        <div className="flex w-full justify-start bg-rose-100">
+        <div className="flex w-full items-center justify-start bg-rose-50">
           {tables.map((table, index) => (
             <div
               key={table.id}
@@ -45,6 +45,8 @@ export default async function BaseLayout(
               <h6 className="inline-block text-xs">{table.name}</h6>
             </div>
           ))}
+
+          <TablePopover tables={tables} />
         </div>
 
         {children}
