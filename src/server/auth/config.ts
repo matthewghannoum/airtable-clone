@@ -49,37 +49,42 @@ const providers = [
             password: { label: "Password", type: "password" },
           },
           authorize: async (credentials) => {
+            if (!credentials?.username || !credentials?.password) {
+              return null;
+            }
+
             const expectedUsername = env.AUTH_DEV_USERNAME ?? "codex";
             const expectedPassword = env.AUTH_DEV_PASSWORD ?? "codex";
 
             if (
-              credentials?.username !== expectedUsername ||
-              credentials?.password !== expectedPassword
+              credentials.username !== expectedUsername ||
+              credentials.password !== expectedPassword
             ) {
               return null;
             }
 
             const email = `${expectedUsername}@example.com`;
 
-            const [existingUser] = await db
-              .select()
-              .from(users)
-              .where(eq(users.email, email))
-              .limit(1);
+            const existingUser = await db.query.users.findFirst({
+              where: eq(users.email, email),
+            });
 
-            if (existingUser) {
-              return existingUser;
-            }
+            const userRecord =
+              existingUser ??
+              (await db
+                .insert(users)
+                .values({
+                  email,
+                  name: "Local Developer",
+                })
+                .returning()
+                .then((rows) => rows[0]!));
 
-            const [user] = await db
-              .insert(users)
-              .values({
-                email,
-                name: "Local Developer",
-              })
-              .returning();
-
-            return user ?? null;
+            return {
+              id: userRecord.id,
+              email: userRecord.email,
+              name: userRecord.name,
+            };
           },
         }),
       ]
@@ -96,12 +101,20 @@ export const authConfig = {
     verificationTokensTable: verificationTokens,
   }),
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
+    session: ({ session, token, user }) => {
+      if (!session.user) return session;
+
+      const id = user?.id ?? token?.sub ?? session.user.id ?? "";
+
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id,
+        },
+      };
+    },
   },
+  secret:
+    env.AUTH_SECRET ?? (env.NODE_ENV === "development" ? "dev-auth-secret" : undefined),
 } satisfies NextAuthConfig;
