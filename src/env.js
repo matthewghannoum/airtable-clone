@@ -16,12 +16,11 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    AUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    AUTH_GOOGLE_ID: z.string(),
-    AUTH_GOOGLE_SECRET: z.string(),
+    AUTH_SECRET: z.string().optional(),
+    AUTH_GOOGLE_ID: z.string().optional(),
+    AUTH_GOOGLE_SECRET: z.string().optional(),
+    AUTH_DEV_USERNAME: z.string().optional(),
+    AUTH_DEV_PASSWORD: z.string().optional(),
     DATABASE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -45,6 +44,8 @@ export const env = createEnv({
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    AUTH_DEV_USERNAME: process.env.AUTH_DEV_USERNAME,
+    AUTH_DEV_PASSWORD: process.env.AUTH_DEV_PASSWORD,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
   },
@@ -59,3 +60,15 @@ export const env = createEnv({
    */
   emptyStringAsUndefined: true,
 });
+
+if (!process.env.SKIP_ENV_VALIDATION && env.NODE_ENV === "production") {
+  if (!env.AUTH_SECRET) {
+    throw new Error("AUTH_SECRET must be set in production environments.");
+  }
+
+  if (!env.AUTH_GOOGLE_ID || !env.AUTH_GOOGLE_SECRET) {
+    throw new Error(
+      "AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET must be set in production environments.",
+    );
+  }
+}

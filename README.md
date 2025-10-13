@@ -8,6 +8,10 @@ We try to keep this project as simple as possible, so you can start with just th
 
 If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
 
+## Local development authentication
+
+When running the app locally you can sign in without Google by choosing the **Credentials** option on the sign-in screen. The default username/password is `codex` / `codex`, and you can override these values with the `AUTH_DEV_USERNAME` and `AUTH_DEV_PASSWORD` environment variables.
+
 - [Next.js](https://nextjs.org)
 - [NextAuth.js](https://next-auth.js.org)
 - [Prisma](https://prisma.io)
