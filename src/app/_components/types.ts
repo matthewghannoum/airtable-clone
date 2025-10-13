@@ -1,16 +1,3 @@
-export type TableData =
-  | {
-      columns: {
-        id: string;
-        name: string;
-        type: "number" | "text";
-        displayOrderNum: number;
-        airtableId: string;
-      }[];
-      rows: unknown[];
-    }
-  | undefined;
-
 export type Column = {
   id: string;
   name: string;
@@ -18,3 +5,10 @@ export type Column = {
   displayOrderNum: number;
   airtableId: string;
 };
+
+export type TableData =
+  | {
+      columns: Column[];
+      rows: unknown[];
+    }
+  | undefined;

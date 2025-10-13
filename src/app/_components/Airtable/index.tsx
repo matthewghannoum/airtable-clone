@@ -11,6 +11,7 @@ import { useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
+import TableFnRow from "../TableFnRow";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
@@ -84,105 +85,112 @@ export default function Airtable({ tableId }: { tableId: string }) {
   });
 
   return (
-    <div className="flex w-full items-start justify-start">
-      <Table className="w-full border-collapse bg-white">
-        {tableData?.columns && (
-          <ATHeader table={table} columns={tableData.columns} />
-        )}
+    <div className="flex w-full flex-col items-start justify-start">
+      {tableData?.columns && <TableFnRow columns={tableData.columns} />}
 
-        <TableBody className="border-b border-neutral-300">
-          {table.getRowModel().rows.map((row, rowIndex) => (
-            <TableRow key={row.id}>
-              <TableCell>
-                <p className="ml-1">{rowIndex + 1}</p>
-              </TableCell>
-
-              {row.getVisibleCells().map((cell, index) => (
-                <TableCell
-                  key={cell.id}
-                  className={`border-r border-neutral-300 ${
-                    editingCell?.rowId === row.id &&
-                    editingCell?.columnId === cell.column.id
-                      ? "border-2 border-blue-500 bg-white"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setEditingCell({ rowId: row.id, columnId: cell.column.id })
-                  }
-                >
-                  {editingCell?.rowId === row.id &&
-                  editingCell?.columnId === cell.column.id ? (
-                    <input
-                      autoFocus
-                      className="w-full bg-transparent outline-none"
-                      type={
-                        tableData?.columns.find(
-                          (col) => col.id === cell.column.id,
-                        )?.type === "number"
-                          ? "number"
-                          : "text"
-                      }
-                      defaultValue={cell.getValue() as string | number}
-                      onChange={(e) => {
-                        const value =
-                          e.target.value === ""
-                            ? null
-                            : tableData?.columns.find(
-                                  (col) => col.id === cell.column.id,
-                                )?.type === "number"
-                              ? Number(e.target.value)
-                              : e.target.value;
-
-                        setEditingCell({
-                          rowId: row.id,
-                          columnId: cell.column.id,
-                          cellValue: value,
-                        });
-                      }}
-                      onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          editingCell?.cellValue !== undefined
-                        ) {
-                          updateCell.mutate({
-                            tableId,
-                            rowId: editingCell.rowId,
-                            columnId: editingCell.columnId,
-                            cellValue: editingCell.cellValue,
-                          });
-                          setEditingCell(null);
-                        }
-                        if (e.key === "Escape") {
-                          setEditingCell(null);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </div>
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-
+      <div className="flex w-full items-start justify-start">
+        <Table className="w-full border-collapse bg-white">
           {tableData?.columns && (
-            <ATAddRow
-              tableId={tableId}
-              columns={tableData.columns}
-              refetch={async () => {
-                await refetch();
-              }}
-            />
+            <ATHeader table={table} columns={tableData.columns} />
           )}
-        </TableBody>
-      </Table>
 
-      <ATAddCol tableId={tableId} />
+          <TableBody className="border-b border-neutral-300">
+            {table.getRowModel().rows.map((row, rowIndex) => (
+              <TableRow key={row.id}>
+                <TableCell>
+                  <p className="ml-1">{rowIndex + 1}</p>
+                </TableCell>
+
+                {row.getVisibleCells().map((cell, index) => (
+                  <TableCell
+                    key={cell.id}
+                    className={`border-r border-neutral-300 ${
+                      editingCell?.rowId === row.id &&
+                      editingCell?.columnId === cell.column.id
+                        ? "border-2 border-blue-500 bg-white"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setEditingCell({
+                        rowId: row.id,
+                        columnId: cell.column.id,
+                      })
+                    }
+                  >
+                    {editingCell?.rowId === row.id &&
+                    editingCell?.columnId === cell.column.id ? (
+                      <input
+                        autoFocus
+                        className="w-full bg-transparent outline-none"
+                        type={
+                          tableData?.columns.find(
+                            (col) => col.id === cell.column.id,
+                          )?.type === "number"
+                            ? "number"
+                            : "text"
+                        }
+                        defaultValue={cell.getValue() as string | number}
+                        onChange={(e) => {
+                          const value =
+                            e.target.value === ""
+                              ? null
+                              : tableData?.columns.find(
+                                    (col) => col.id === cell.column.id,
+                                  )?.type === "number"
+                                ? Number(e.target.value)
+                                : e.target.value;
+
+                          setEditingCell({
+                            rowId: row.id,
+                            columnId: cell.column.id,
+                            cellValue: value,
+                          });
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            editingCell?.cellValue !== undefined
+                          ) {
+                            updateCell.mutate({
+                              tableId,
+                              rowId: editingCell.rowId,
+                              columnId: editingCell.columnId,
+                              cellValue: editingCell.cellValue,
+                            });
+                            setEditingCell(null);
+                          }
+                          if (e.key === "Escape") {
+                            setEditingCell(null);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+
+            {tableData?.columns && (
+              <ATAddRow
+                tableId={tableId}
+                columns={tableData.columns}
+                refetch={async () => {
+                  await refetch();
+                }}
+              />
+            )}
+          </TableBody>
+        </Table>
+
+        <ATAddCol tableId={tableId} />
+      </div>
     </div>
   );
 }
