@@ -4,8 +4,9 @@ import TableRow from "@/app/_components/TableTabs";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { Table } from "lucide-react";
+import { ArrowDownUp, EyeOff, ListFilter, Table } from "lucide-react";
 import TableTabs from "@/app/_components/TableTabs";
+import { Button } from "@/components/ui/button";
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
@@ -44,6 +45,29 @@ export default async function BaseLayout(
           currentTableId={tableId}
           currentTables={tables}
         />
+
+        <div className="flex items-center justify-end gap-1 border-t border-b border-neutral-300 p-1">
+          <Button variant="ghost">
+            <div className="flex items-center justify-center gap-2">
+              <EyeOff size={20} />
+              <p>Hide fields</p>
+            </div>
+          </Button>
+
+          <Button variant="ghost">
+            <div className="flex items-center justify-center gap-2">
+              <ListFilter size={20} />
+              <p>Filter</p>
+            </div>
+          </Button>
+
+          <Button variant="ghost">
+            <div className="flex items-center justify-center gap-2">
+              <ArrowDownUp size={20} />
+              <p>Sort</p>
+            </div>
+          </Button>
+        </div>
 
         {children}
       </div>
