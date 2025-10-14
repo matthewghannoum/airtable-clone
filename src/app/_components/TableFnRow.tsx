@@ -7,8 +7,10 @@ import {
   EyeOff,
   ListFilter,
   MoveRight,
+  Plus,
   Tally5,
   TextInitial,
+  X,
 } from "lucide-react";
 import type { Column } from "./types";
 import {
@@ -77,6 +79,12 @@ function SortTool({ columns }: { columns: Column[] }) {
     );
   }
 
+  function removeSort(columnId: string) {
+    setSelectedSorts((prev) =>
+      prev.filter((sort) => sort.column.id !== columnId),
+    );
+  }
+
   return (
     <Popover>
       <PopoverTrigger className="ml-2 cursor-pointer">
@@ -88,7 +96,7 @@ function SortTool({ columns }: { columns: Column[] }) {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="end">
+      <PopoverContent align="end" className="w-full min-w-md">
         <div className="flex flex-col items-start justify-start gap-2">
           <div className="flex w-full items-center justify-start gap-2">
             <p className="text-sm font-medium">Sort by</p>
@@ -107,11 +115,11 @@ function SortTool({ columns }: { columns: Column[] }) {
 
           <div className="w-full">
             {selectedSorts.length !== 0 ? (
-              <>
+              <div className="flex flex-col items-start justify-start gap-2">
                 {selectedSorts.map(({ column, sortOrder }, index) => (
                   <div
                     key={index}
-                    className="flex w-full items-center justify-start gap-2"
+                    className="flex w-full items-center justify-start gap-3"
                   >
                     <Select
                       value={column.id}
@@ -149,9 +157,22 @@ function SortTool({ columns }: { columns: Column[] }) {
                         <SortOrderItem type={column.type} />
                       </SelectContent>
                     </Select>
+
+                    <X
+                      size={25}
+                      className="ml-2 cursor-pointer"
+                      onClick={() => removeSort(column.id)}
+                    />
                   </div>
                 ))}
-              </>
+
+                <Button variant="ghost" className="p-0 hover:bg-transparent">
+                  <div className="flex items-center justify-center gap-1">
+                    <Plus size={10} />
+                    <p>Add another sort</p>
+                  </div>
+                </Button>
+              </div>
             ) : (
               <>
                 {columns.map((column, index) => (
