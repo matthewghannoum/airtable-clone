@@ -91,6 +91,8 @@ function SortTool({
   tableId: string;
   columns: Column[];
 }) {
+  const utils = api.useUtils();
+
   const [sortColumns, setSortColumns] = useState<SortColumn[]>(
     columns
       .map((col) =>
@@ -105,7 +107,11 @@ function SortTool({
       .filter((col): col is SortColumn => col !== null),
   );
 
-  const updateSorts = api.table.updateSorts.useMutation();
+  const updateSorts = api.table.updateSorts.useMutation({
+    onSuccess: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
 
   useEffect(() => {
     const sorts = sortColumns.map((sortColumn, index) => ({
