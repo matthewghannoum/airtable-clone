@@ -1,10 +1,7 @@
 import BaseTitle from "@/app/_components/BaseTitle";
-import TablePopover from "@/app/_components/TableTabs/TablePopover";
-import TableRow from "@/app/_components/TableTabs";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { Table } from "lucide-react";
 import TableTabs from "@/app/_components/TableTabs";
 
 export default async function BaseLayout(

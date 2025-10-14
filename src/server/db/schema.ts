@@ -109,6 +109,8 @@ export const airtableColumns = createTable("at_column", (d) => ({
   name: d.varchar({ length: 255 }).notNull(),
   type: d.text({ enum: ["text", "number"] }).notNull(),
   displayOrderNum: d.integer().notNull(),
+  sortOrder: d.text({ enum: ["asc", "desc"] }),
+  sortPriority: d.integer(),
   airtableId: d
     .uuid()
     .notNull()

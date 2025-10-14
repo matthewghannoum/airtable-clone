@@ -40,6 +40,8 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
           displayOrderNum: prev.columns.length,
           type: input.type,
           airtableId: tableId,
+          sortOrder: null,
+          sortPriority: null,
         };
 
         utils.table.get.setData({ tableId }, () => ({

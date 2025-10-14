@@ -1,6 +1,6 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { and, eq, max, sql } from "drizzle-orm";
+import { and, asc, desc, eq, max, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import { z } from "zod";
 
@@ -49,17 +49,99 @@ export const tableRouter = createTRPCRouter({
         .from(airtableColumns)
         .where(eq(airtableColumns.airtableId, input.tableId));
 
+      const orderBy = columns
+        .map((col) => {
+          if (col.sortOrder && col.sortPriority !== null) {
+            // raw sql is safe here because col.id and col.type are from our own db which we control
+            // and is validated
+            // validate inputs you’ll turn into SQL keywords
+            const dir = col.sortOrder === "desc" ? "DESC" : "ASC";
+
+            // build the JSON ->> expression with the key bound as a parameter (safe)
+            const baseExpr =
+              col.type === "number"
+                ? sql`(${airtableRows.values} ->> ${col.id})::numeric`
+                : sql`${airtableRows.values} ->> ${col.id}`;
+
+            // append direction as a constant (validated above)
+            const orderExpr = sql`${baseExpr} ${sql.raw(dir)}`;
+            return {
+              orderByComponent: orderExpr,
+              // col.sortOrder === "asc"
+              //   ? asc(orderByComponent)
+              //   : desc(orderByComponent),
+              sortPriority: col.sortPriority,
+            };
+          }
+          return null;
+        })
+        .filter((c) => c !== null)
+        .sort((a, b) => a.sortPriority - b.sortPriority)
+        .map((c) => c.orderByComponent);
+
+      // const orderBy = [airtableRows.createdTimestamp];
+
+      console.log("orderBy", orderBy);
+
       const rows = await ctx.db
         .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
         .where(eq(airtableRows.airtableId, input.tableId))
-        .orderBy(airtableRows.createdTimestamp);
+        .orderBy(...orderBy); // airtableRows.createdTimestamp
 
       return {
         columns,
         rows: rows.map((row) => row.values),
         rowIds: rows.map((row) => row.id),
       };
+    }),
+  updateSorts: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        sorts: z.array(
+          z.object({
+            columnId: z.string(),
+            sortOrder: z.enum(["asc", "desc"]),
+            sortPriority: z.number(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // update the sort order and priority of the specified columns
+      for (const sort of input.sorts) {
+        await ctx.db
+          .update(airtableColumns)
+          .set({
+            sortOrder: sort.sortOrder,
+            sortPriority: sort.sortPriority,
+          })
+          .where(
+            and(
+              eq(airtableColumns.airtableId, input.tableId),
+              eq(airtableColumns.id, sort.columnId),
+            ),
+          );
+      }
+
+      // if a column is not in the input sorts, clear its sortOrder and sortPriority
+      // await ctx.db
+      //   .update(airtableColumns)
+      //   .set({
+      //     sortOrder: null,
+      //     sortPriority: null,
+      //   })
+      //   .where(
+      //     and(
+      //       eq(airtableColumns.airtableId, input.tableId),
+      //       // airtableColumns.id not in input.sorts.map(s => s.columnId)
+      //       sql`${airtableColumns.id} NOT IN (${sql.join(
+      //         input.sorts.map((s) => sql`${s.columnId}`),
+      //         sql`,`,
+      //       )})`,
+      //     ),
+      //   );
     }),
   addColumn: protectedProcedure
     .input(
@@ -152,37 +234,5 @@ export const tableRouter = createTRPCRouter({
       }
 
       return row;
-    }),
-  getRows: protectedProcedure
-    .input(z.object({ tableId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const rows = await ctx.db
-        .select()
-        .from(airtableRows)
-        .where(eq(airtableRows.airtableId, input.tableId));
-
-      const columns = await ctx.db
-        .select()
-        .from(airtableColumns)
-        .where(eq(airtableColumns.airtableId, input.tableId));
-
-      const columnIdToType: Record<string, "text" | "number"> = {};
-      for (const column of columns) {
-        columnIdToType[column.id] = column.type;
-      }
-
-      const cleanedRows = rows
-        .filter((row) => columnIdToType[row.id])
-        .map((row) => {
-          const values = row.values;
-
-          for (const { id: columnId } of columns) {
-            values[columnId] ??= null;
-          }
-
-          return { ...row, values };
-        });
-
-      return cleanedRows;
     }),
 });
