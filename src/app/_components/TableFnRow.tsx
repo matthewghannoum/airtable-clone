@@ -32,6 +32,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function SortOrderItem({ type }: { type: "text" | "number" }) {
   const lowChar = type === "text" ? "A" : "1";
@@ -63,6 +69,12 @@ function SortTool({ columns }: { columns: Column[] }) {
     { column: Column; sortOrder: "asc" | "desc" }[]
   >([]);
 
+  function addSort(column: Column) {
+    if (selectedSorts.find((sort) => sort.column.id === column.id)) return;
+
+    setSelectedSorts((prev) => [...prev, { column, sortOrder: "asc" }]);
+  }
+
   function updateSortOrder(columnId: string, order: "asc" | "desc") {
     setSelectedSorts((prev) =>
       prev.map((sort) =>
@@ -83,6 +95,10 @@ function SortTool({ columns }: { columns: Column[] }) {
     setSelectedSorts((prev) =>
       prev.filter((sort) => sort.column.id !== columnId),
     );
+  }
+
+  function isColumnSelected(columnId: string) {
+    return selectedSorts.some((sort) => sort.column.id === columnId);
   }
 
   return (
@@ -166,33 +182,52 @@ function SortTool({ columns }: { columns: Column[] }) {
                   </div>
                 ))}
 
-                <Button variant="ghost" className="p-0 hover:bg-transparent">
-                  <div className="flex items-center justify-center gap-1">
-                    <Plus size={10} />
-                    <p>Add another sort</p>
-                  </div>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Button
+                      variant="ghost"
+                      className="p-0 hover:bg-transparent"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <Plus size={10} />
+                        <p>Add another sort</p>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent>
+                    {columns.map((column, index) => (
+                      <>
+                        {!isColumnSelected(column.id) && (
+                          <DropdownMenuItem
+                            key={index}
+                            onClick={() => addSort(column)}
+                          >
+                            {column.name}
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <>
                 {columns.map((column, index) => (
-                  <PopoverListItem
-                    key={index}
-                    text={column.name}
-                    icon={
-                      column.type === "text" ? (
-                        <TextInitial size={15} />
-                      ) : (
-                        <Tally5 size={15} />
-                      )
-                    }
-                    onClick={() =>
-                      setSelectedSorts((prev) => [
-                        ...prev,
-                        { column, sortOrder: "asc" },
-                      ])
-                    }
-                  />
+                  <>
+                    <PopoverListItem
+                      key={index}
+                      text={column.name}
+                      icon={
+                        column.type === "text" ? (
+                          <TextInitial size={15} />
+                        ) : (
+                          <Tally5 size={15} />
+                        )
+                      }
+                      onClick={() => addSort(column)}
+                    />
+                  </>
                 ))}
               </>
             )}
