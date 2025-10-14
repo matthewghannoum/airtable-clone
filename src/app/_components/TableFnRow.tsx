@@ -69,6 +69,14 @@ function SortTool({ columns }: { columns: Column[] }) {
     );
   }
 
+  function updateColumn(columnId: string, newColumn: Column) {
+    setSelectedSorts((prev) =>
+      prev.map((sort) =>
+        sort.column.id === columnId ? { ...sort, column: newColumn } : sort,
+      ),
+    );
+  }
+
   return (
     <Popover>
       <PopoverTrigger className="ml-2 cursor-pointer">
@@ -101,7 +109,32 @@ function SortTool({ columns }: { columns: Column[] }) {
             {selectedSorts.length !== 0 ? (
               <>
                 {selectedSorts.map(({ column, sortOrder }, index) => (
-                  <div key={index}>
+                  <div
+                    key={index}
+                    className="flex w-full items-center justify-start gap-2"
+                  >
+                    <Select
+                      value={column.id}
+                      onValueChange={(value) =>
+                        updateColumn(
+                          column.id,
+                          columns.find((col) => col.id === value)!,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Column type" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {columns.map((columnOption, optionindex) => (
+                          <SelectItem key={optionindex} value={columnOption.id}>
+                            {columnOption.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
                     <Select
                       value={sortOrder}
                       onValueChange={(value) =>
