@@ -79,10 +79,6 @@ export const tableRouter = createTRPCRouter({
         .sort((a, b) => a.sortPriority - b.sortPriority)
         .map((c) => c.orderByComponent);
 
-      // const orderBy = [airtableRows.createdTimestamp];
-
-      console.log("orderBy", orderBy);
-
       const rows = await ctx.db
         .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
@@ -126,22 +122,32 @@ export const tableRouter = createTRPCRouter({
       }
 
       // if a column is not in the input sorts, clear its sortOrder and sortPriority
-      // await ctx.db
-      //   .update(airtableColumns)
-      //   .set({
-      //     sortOrder: null,
-      //     sortPriority: null,
-      //   })
-      //   .where(
-      //     and(
-      //       eq(airtableColumns.airtableId, input.tableId),
-      //       // airtableColumns.id not in input.sorts.map(s => s.columnId)
-      //       sql`${airtableColumns.id} NOT IN (${sql.join(
-      //         input.sorts.map((s) => sql`${s.columnId}`),
-      //         sql`,`,
-      //       )})`,
-      //     ),
-      //   );
+      if (input.sorts.length > 0) {
+        await ctx.db
+          .update(airtableColumns)
+          .set({
+            sortOrder: null,
+            sortPriority: null,
+          })
+          .where(
+            and(
+              eq(airtableColumns.airtableId, input.tableId),
+              // airtableColumns.id not in input.sorts.map(s => s.columnId)
+              sql`${airtableColumns.id} NOT IN (${sql.join(
+                input.sorts.map((s) => sql`${s.columnId}`),
+                sql`,`,
+              )})`,
+            ),
+          );
+      } else {
+        await ctx.db
+          .update(airtableColumns)
+          .set({
+            sortOrder: null,
+            sortPriority: null,
+          })
+          .where(eq(airtableColumns.airtableId, input.tableId));
+      }
     }),
   addColumn: protectedProcedure
     .input(
