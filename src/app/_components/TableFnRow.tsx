@@ -12,7 +12,6 @@ import {
   TextInitial,
   X,
 } from "lucide-react";
-import type { Column } from "./types";
 import {
   Popover,
   PopoverContent,
@@ -40,6 +39,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/trpc/react";
 
+type Column = {
+  id: string;
+  name: string;
+  type: "number" | "text";
+  displayOrderNum: number;
+  sortOrder: "asc" | "desc" | null;
+  sortPriority: number | null;
+  airtableId: string;
+};
+
 function SortOrderItem({ type }: { type: "text" | "number" }) {
   const lowChar = type === "text" ? "A" : "1";
   const highChar = type === "text" ? "Z" : "9";
@@ -65,6 +74,16 @@ function SortOrderItem({ type }: { type: "text" | "number" }) {
   );
 }
 
+type SortColumn = {
+  id: string;
+  name: string;
+  type: "number" | "text";
+  displayOrderNum: number;
+  sortOrder: "asc" | "desc";
+  sortPriority: number;
+  airtableId: string;
+};
+
 function SortTool({
   tableId,
   columns,
@@ -72,52 +91,66 @@ function SortTool({
   tableId: string;
   columns: Column[];
 }) {
-  const [selectedSorts, setSelectedSorts] = useState<
-    { column: Column; sortOrder: "asc" | "desc" }[]
-  >([]);
+  const [sortColumns, setSortColumns] = useState<SortColumn[]>(
+    columns
+      .map((col) =>
+        col.sortOrder || col.sortPriority
+          ? {
+              ...col,
+              sortOrder: col.sortOrder,
+              sortPriority: col.sortPriority,
+            }
+          : null,
+      )
+      .filter((col): col is SortColumn => col !== null),
+  );
 
   const updateSorts = api.table.updateSorts.useMutation();
 
   useEffect(() => {
-    const sorts = selectedSorts.map((sort, index) => ({
-      columnId: sort.column.id,
-      sortOrder: sort.sortOrder,
+    const sorts = sortColumns.map((sortColumn, index) => ({
+      columnId: sortColumn.id,
+      sortOrder: sortColumn.sortOrder,
       sortPriority: index,
     }));
 
     updateSorts.mutate({ sorts, tableId });
-  }, [selectedSorts]);
+  }, [sortColumns]);
 
-  function addSort(column: Column) {
-    if (selectedSorts.find((sort) => sort.column.id === column.id)) return;
+  function addSort(column: SortColumn) {
+    if (sortColumns.find((sort) => sort.id === column.id)) return;
 
-    setSelectedSorts((prev) => [...prev, { column, sortOrder: "asc" }]);
+    setSortColumns((prev) => [...prev, { ...column, sortOrder: "asc" }]);
   }
 
   function updateSortOrder(columnId: string, order: "asc" | "desc") {
-    setSelectedSorts((prev) =>
-      prev.map((sort) =>
-        sort.column.id === columnId ? { ...sort, sortOrder: order } : sort,
+    setSortColumns((prev) =>
+      prev.map((sortColumn) =>
+        sortColumn.id === columnId
+          ? { ...sortColumn, sortOrder: order }
+          : sortColumn,
       ),
     );
   }
 
   function updateColumn(columnId: string, newColumn: Column) {
-    setSelectedSorts((prev) =>
-      prev.map((sort) =>
-        sort.column.id === columnId ? { ...sort, column: newColumn } : sort,
+    setSortColumns((prev) =>
+      prev.map((sortColumn) =>
+        sortColumn.id === columnId
+          ? { ...sortColumn, column: newColumn }
+          : sortColumn,
       ),
     );
   }
 
   function removeSort(columnId: string) {
-    setSelectedSorts((prev) =>
-      prev.filter((sort) => sort.column.id !== columnId),
+    setSortColumns((prev) =>
+      prev.filter((sortColumn) => sortColumn.id !== columnId),
     );
   }
 
   function isColumnSelected(columnId: string) {
-    return selectedSorts.some((sort) => sort.column.id === columnId);
+    return sortColumns.some((sortColumn) => sortColumn.id === columnId);
   }
 
   return (
@@ -149,18 +182,18 @@ function SortTool({
           <hr className="w-full" />
 
           <div className="w-full">
-            {selectedSorts.length !== 0 ? (
+            {sortColumns.length !== 0 ? (
               <div className="flex flex-col items-start justify-start gap-2">
-                {selectedSorts.map(({ column, sortOrder }, index) => (
+                {sortColumns.map((sortColumn, index) => (
                   <div
                     key={index}
                     className="flex w-full items-center justify-start gap-3"
                   >
                     <Select
-                      value={column.id}
+                      value={sortColumn.id}
                       onValueChange={(value) =>
                         updateColumn(
-                          column.id,
+                          sortColumn.id,
                           columns.find((col) => col.id === value)!,
                         )
                       }
@@ -182,9 +215,9 @@ function SortTool({
                     </Select>
 
                     <Select
-                      value={sortOrder}
+                      value={sortColumn.sortOrder}
                       onValueChange={(value) =>
-                        updateSortOrder(column.id, value as "asc" | "desc")
+                        updateSortOrder(sortColumn.id, value as "asc" | "desc")
                       }
                     >
                       <SelectTrigger>
@@ -192,14 +225,14 @@ function SortTool({
                       </SelectTrigger>
 
                       <SelectContent>
-                        <SortOrderItem type={column.type} />
+                        <SortOrderItem type={sortColumn.type} />
                       </SelectContent>
                     </Select>
 
                     <X
                       size={25}
                       className="ml-2 cursor-pointer"
-                      onClick={() => removeSort(column.id)}
+                      onClick={() => removeSort(sortColumn.id)}
                     />
                   </div>
                 ))}
@@ -223,7 +256,13 @@ function SortTool({
                         {!isColumnSelected(column.id) && (
                           <DropdownMenuItem
                             key={index}
-                            onClick={() => addSort(column)}
+                            onClick={() =>
+                              addSort({
+                                ...column,
+                                sortOrder: "asc",
+                                sortPriority: index,
+                              })
+                            }
                           >
                             {column.name}
                           </DropdownMenuItem>
@@ -247,7 +286,13 @@ function SortTool({
                           <Tally5 size={15} />
                         )
                       }
-                      onClick={() => addSort(column)}
+                      onClick={() =>
+                        addSort({
+                          ...column,
+                          sortOrder: "asc",
+                          sortPriority: index,
+                        })
+                      }
                     />
                   </>
                 ))}
