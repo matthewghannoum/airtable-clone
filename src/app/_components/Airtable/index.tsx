@@ -86,7 +86,9 @@ export default function Airtable({ tableId }: { tableId: string }) {
 
   return (
     <div className="flex w-full flex-col items-start justify-start">
-      {tableData?.columns && <TableFnRow columns={tableData.columns} />}
+      {tableData?.columns && (
+        <TableFnRow tableId={tableId} columns={tableData.columns} />
+      )}
 
       <div className="flex w-full items-start justify-start">
         <Table className="w-full border-collapse bg-white">

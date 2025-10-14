@@ -24,7 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/trpc/react";
 
 function SortOrderItem({ type }: { type: "text" | "number" }) {
   const lowChar = type === "text" ? "A" : "1";
@@ -64,10 +65,28 @@ function SortOrderItem({ type }: { type: "text" | "number" }) {
   );
 }
 
-function SortTool({ columns }: { columns: Column[] }) {
+function SortTool({
+  tableId,
+  columns,
+}: {
+  tableId: string;
+  columns: Column[];
+}) {
   const [selectedSorts, setSelectedSorts] = useState<
     { column: Column; sortOrder: "asc" | "desc" }[]
   >([]);
+
+  const updateSorts = api.table.updateSorts.useMutation();
+
+  useEffect(() => {
+    const sorts = selectedSorts.map((sort, index) => ({
+      columnId: sort.column.id,
+      sortOrder: sort.sortOrder,
+      sortPriority: index,
+    }));
+
+    updateSorts.mutate({ sorts, tableId });
+  }, [selectedSorts]);
 
   function addSort(column: Column) {
     if (selectedSorts.find((sort) => sort.column.id === column.id)) return;
@@ -151,8 +170,11 @@ function SortTool({ columns }: { columns: Column[] }) {
                       </SelectTrigger>
 
                       <SelectContent>
-                        {columns.map((columnOption, optionindex) => (
-                          <SelectItem key={optionindex} value={columnOption.id}>
+                        {columns.map((columnOption) => (
+                          <SelectItem
+                            key={columnOption.id}
+                            value={columnOption.id}
+                          >
                             {columnOption.name}
                           </SelectItem>
                         ))}
@@ -238,7 +260,13 @@ function SortTool({ columns }: { columns: Column[] }) {
   );
 }
 
-export default function TableFnRow({ columns }: { columns: Column[] }) {
+export default function TableFnRow({
+  tableId,
+  columns,
+}: {
+  tableId: string;
+  columns: Column[];
+}) {
   return (
     <div className="flex w-full items-center justify-end gap-1 border-t border-b border-neutral-300 p-1">
       <Button variant="ghost">
@@ -255,7 +283,7 @@ export default function TableFnRow({ columns }: { columns: Column[] }) {
         </div>
       </Button>
 
-      <SortTool columns={columns} />
+      <SortTool tableId={tableId} columns={columns} />
     </div>
   );
 }
