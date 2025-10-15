@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
@@ -7,6 +8,8 @@ import { eq } from "drizzle-orm";
 
 export default async function Home() {
   const session = await auth();
+
+  if (!session?.user?.id) redirect("/");
 
   if (session) {
     const baseRows = await db
