@@ -10,6 +10,7 @@ import {
   users,
   verificationTokens,
 } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
 
 const devAuthConfig: NextAuthConfig = {
   // Pure JWT sessions (no DB rows)
@@ -29,11 +30,36 @@ const devAuthConfig: NextAuthConfig = {
           creds?.username === "dev" &&
           creds?.password === "dev"
         ) {
+          const demoEmail = "dev@example.com";
+          const demoName = "Dev User";
+
+          // 1️⃣ Try to find existing user
+          const existing = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, demoEmail))
+            .limit(1);
+
+          // 2️⃣ If not found, insert and return it
+          if (existing.length === 0) {
+            const [inserted] = await db
+              .insert(users)
+              .values({
+                id: crypto.randomUUID(),
+                name: demoName,
+                email: demoEmail,
+              })
+              .returning();
+
+            if (!inserted) throw new Error("Failed to create demo user");
+
+            return { id: inserted.id, name: demoName, email: demoEmail }; // returned user gets encoded into JWT
+          }
+
           return {
             id: "d68fb6c3-39b4-4cb3-a18d-bc3ce32f8618",
-            name: "Dev User",
-            email: "dev@example.com",
-            role: "admin",
+            name: demoName,
+            email: demoEmail,
           };
         }
         // Return null to fail sign-in (never throw; never return undefined)
