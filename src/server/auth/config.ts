@@ -11,6 +11,7 @@ import {
   verificationTokens,
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { env } from "@/env";
 
 const devAuthConfig: NextAuthConfig = {
   // Pure JWT sessions (no DB rows)
@@ -138,4 +139,6 @@ const prodAuthConfig = {
 } satisfies NextAuthConfig;
 
 export const authConfig =
-  process.env.NODE_ENV === "development" ? devAuthConfig : prodAuthConfig;
+  env.NODE_ENV === "development" && env.IS_CREDENTIALS_PROVIDER === "true"
+    ? devAuthConfig
+    : prodAuthConfig;
