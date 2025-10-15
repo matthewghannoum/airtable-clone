@@ -1,6 +1,7 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 
 import { db } from "@/server/db";
 import {
@@ -10,33 +11,75 @@ import {
   verificationTokens,
 } from "@/server/db/schema";
 
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
- */
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      // ...other properties
-      // role: UserRole;
-    } & DefaultSession["user"];
-  }
+const devAuthConfig: NextAuthConfig = {
+  // Pure JWT sessions (no DB rows)
+  session: { strategy: "jwt" },
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
-}
+  providers: [
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(creds) {
+        // Dev-only dummy user. Replace with real lookup in prod.
+        if (
+          process.env.NODE_ENV === "development" &&
+          creds?.username === "dev" &&
+          creds?.password === "dev"
+        ) {
+          return {
+            id: "d68fb6c3-39b4-4cb3-a18d-bc3ce32f8618",
+            name: "Dev User",
+            email: "dev@example.com",
+            role: "admin",
+          };
+        }
+        // Return null to fail sign-in (never throw; never return undefined)
+        return null;
+      },
+    }),
+  ],
 
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
- */
-export const authConfig = {
+  callbacks: {
+    // Called on sign-in and whenever the JWT is checked/updated
+    async jwt({ token, user }) {
+      // On initial sign-in, copy fields from the returned user to the token
+      if (user) {
+        if (user.id) token.id = user.id;
+        if (user.name) token.name = user.name;
+        if (user.email) token.email = user.email;
+      }
+      return token; // ALWAYS return the token
+    },
+
+    // Controls what goes to the session (client/server via auth()/useSession())
+    async session({ session, token }) {
+      if (!token?.id) throw new Error("Missing token.id");
+
+      // ensure the object exists
+      session.user ??= {
+        id: "",
+        name: null,
+        email: "",
+        image: null,
+        emailVerified: null,
+      };
+
+      // minimal, single cast to satisfy TS (no global type augments)
+      (session.user as { id: string }).id = token.id as string;
+
+      // keep your existing mirroring (no null into id)
+      session.user.name = token.name ?? session.user.name ?? null;
+      session.user.email = token.email ?? session.user.email ?? null;
+
+      return session;
+    },
+  },
+};
+
+const prodAuthConfig = {
   providers: [
     Google,
     /**
@@ -65,3 +108,6 @@ export const authConfig = {
     }),
   },
 } satisfies NextAuthConfig;
+
+export const authConfig =
+  process.env.NODE_ENV === "development" ? devAuthConfig : prodAuthConfig;
