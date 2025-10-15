@@ -56,9 +56,11 @@ const devAuthConfig: NextAuthConfig = {
             return { id: inserted.id, name: demoName, email: demoEmail }; // returned user gets encoded into JWT
           }
 
+          if (!existing[0]) throw new Error("Existing user has no ID");
+
           return {
-            id: "d68fb6c3-39b4-4cb3-a18d-bc3ce32f8618",
-            name: demoName,
+            id: existing[0].id,
+            name: existing[0].name,
             email: demoEmail,
           };
         }
