@@ -11,7 +11,7 @@ export default async function BasesLayout({
 }) {
   const session = await auth();
 
-  if (!session) redirect("/");
+  if (!session?.user) redirect("/");
 
   return (
     <div className="flex h-screen flex-col bg-neutral-100">
