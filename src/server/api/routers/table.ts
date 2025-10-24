@@ -17,6 +17,7 @@ export const tableRouter = createTRPCRouter({
   createEmptyRow: protectedProcedure
     .input(
       z.object({
+        rowId: z.string(), // a rowId is provided by the client so it can optimistically update the client correctly
         tableId: z.string(),
       }),
     )
@@ -34,6 +35,7 @@ export const tableRouter = createTRPCRouter({
       const [newRow] = await ctx.db
         .insert(airtableRows)
         .values({
+          id: input.rowId,
           airtableId: input.tableId,
           values,
         })
@@ -152,6 +154,7 @@ export const tableRouter = createTRPCRouter({
   addColumn: protectedProcedure
     .input(
       z.object({
+        columnId: z.string(),
         tableId: z.string(),
         name: z.string().min(1).max(100),
         type: z.enum(["text", "number"]),
@@ -168,6 +171,7 @@ export const tableRouter = createTRPCRouter({
       const [newColumn] = await ctx.db
         .insert(airtableColumns)
         .values({
+          id: input.columnId,
           airtableId: input.tableId,
           name: input.name,
           type: input.type,
@@ -180,8 +184,8 @@ export const tableRouter = createTRPCRouter({
   updateCell: protectedProcedure
     .input(
       z.object({
+        rowId: z.string(), // a rowId is provided by the client so it can optimistically update the client correctly
         tableId: z.string(),
-        rowId: z.string(),
         columnId: z.string(),
         cellValue: z.union([z.string(), z.number(), z.null()]),
       }),

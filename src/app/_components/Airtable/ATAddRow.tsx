@@ -15,7 +15,8 @@ export default function ATAddRow({
   const utils = api.useUtils();
 
   const createEmptyRow = api.table.createEmptyRow.useMutation({
-    onMutate: async () => {
+    onMutate: async ({ rowId }) => {
+      console.log("rowId", rowId);
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
       await utils.table.get.cancel({ tableId });
 
@@ -35,7 +36,7 @@ export default function ATAddRow({
         utils.table.get.setData({ tableId }, () => ({
           columns: prev.columns,
           rows: [...prev.rows, emptyRow],
-          rowIds: [...prev.rowIds, "temp-id"],
+          rowIds: [...prev.rowIds, rowId],
         }));
       }
 
@@ -49,7 +50,7 @@ export default function ATAddRow({
       className="cursor-pointer"
       onClick={() => {
         createEmptyRow
-          .mutateAsync({ tableId })
+          .mutateAsync({ tableId, rowId: crypto.randomUUID() })
           .then(async () => {
             await refetch();
           })
