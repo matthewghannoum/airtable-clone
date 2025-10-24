@@ -25,7 +25,7 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
   const [colName, setColName] = useState<string | null>(null);
 
   const addCol = api.table.addColumn.useMutation({
-    onMutate: async (input) => {
+    onMutate: async ({ columnId, name, type }) => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
       await utils.table.get.cancel({ tableId });
 
@@ -35,10 +35,10 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
       // 3) update cache optimistically
       if (prev) {
         const newCol = {
-          id: "temp-id",
-          name: input.name,
+          id: columnId,
+          name: name,
           displayOrderNum: prev.columns.length,
-          type: input.type,
+          type: type,
           airtableId: tableId,
           sortOrder: null,
           sortPriority: null,
@@ -122,6 +122,7 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
                     onClick={() => {
                       if (colName)
                         addCol.mutate({
+                          columnId: crypto.randomUUID(),
                           tableId,
                           name: colName,
                           type: colType,
