@@ -7,9 +7,11 @@ import { airtables, bases } from "@/server/db/schema";
 import { redirect } from "next/navigation";
 import type { LayoutProps } from "next";
 import { eq } from "drizzle-orm";
+import Image from "next/image";
+import BackLogo from "@/app/_components/common/BackLogo";
 
 export default async function BaseLayout(
-  props: LayoutProps<"/bases/[baseId]/[tableId]">
+  props: LayoutProps<"/bases/[baseId]/[tableId]">,
 ) {
   const { children } = props;
   const { baseId, tableId } = await props.params;
@@ -41,7 +43,7 @@ export default async function BaseLayout(
     <div className="flex h-screen bg-neutral-100">
       <aside className="flex h-full w-20 flex-col items-center justify-between border-r-1 border-neutral-200 bg-white py-6 shadow-sm">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-pink-500" />
+          <BackLogo />
         </div>
 
         <div className="relative flex items-center justify-center">
