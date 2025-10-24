@@ -69,7 +69,9 @@ export default function TablePopover({
         <PopoverListItem
           text="Add table"
           icon={<Plus />}
-          onClick={() => addTable.mutate({ baseId })}
+          onClick={() =>
+            addTable.mutate({ baseId, tableId: crypto.randomUUID() })
+          }
         />
       </PopoverContent>
     </Popover>

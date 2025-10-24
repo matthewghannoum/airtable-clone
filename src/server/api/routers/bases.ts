@@ -15,11 +15,17 @@ import type * as schema from "@/server/db/schema";
 type DB = PostgresJsDatabase<typeof schema>;
 type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 
-async function addNewTable(baseId: string, tableName: string, db: DB) {
-  const tableId = await db.transaction(async (tx) => {
+async function addNewTable(
+  baseId: string,
+  tableName: string,
+  db: DB,
+  tableId: string | undefined = undefined,
+) {
+  const returnedTableId = await db.transaction(async (tx) => {
     const [airtableRow] = await tx
       .insert(airtables)
       .values({
+        ...(tableId && { id: tableId }),
         name: tableName,
         baseId,
       })
@@ -77,7 +83,7 @@ async function addNewTable(baseId: string, tableName: string, db: DB) {
     return airtableRow.id;
   });
 
-  return tableId;
+  return returnedTableId;
 }
 
 export const basesRouter = createTRPCRouter({
@@ -136,26 +142,26 @@ export const basesRouter = createTRPCRouter({
   addTable: protectedProcedure
     .input(
       z.object({
+        tableId: z.string(),
         baseId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { baseId } = input;
-
       const tableId = await ctx.db.transaction(async (tx: Tx) => {
         const [countRow] = await ctx.db
           .select({ count: count(airtables.id) })
           .from(airtables)
-          .where(eq(airtables.baseId, baseId));
+          .where(eq(airtables.baseId, input.baseId));
 
         if (!countRow) {
           throw new Error("Base not found");
         }
 
         const tableId = await addNewTable(
-          baseId,
+          input.baseId,
           `Table ${countRow.count + 1}`,
           tx,
+          input.tableId,
         );
 
         return tableId;
