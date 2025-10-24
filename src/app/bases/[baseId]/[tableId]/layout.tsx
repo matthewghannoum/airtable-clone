@@ -40,7 +40,7 @@ export default async function BaseLayout(
 
   return (
     <div className="flex h-screen bg-neutral-100">
-      <aside className="flex h-full w-20 flex-col items-center justify-between border-r-1 border-neutral-200 bg-white py-6 shadow-sm">
+      <aside className="flex h-full w-16 flex-col items-center justify-between border-r-1 border-neutral-200 bg-white py-6 shadow-sm">
         <div className="flex flex-col items-center gap-4">
           <BackLogo />
         </div>

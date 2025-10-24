@@ -10,16 +10,16 @@ export default function BackLogo() {
 
   return (
     <div
-      className="min-h-10 w-full cursor-pointer"
+      className="flex min-h-8 w-full cursor-pointer items-center"
       onMouseOver={() => setIsHovered(true)}
       onMouseOut={() => setIsHovered(false)}
     >
       {isHovered ? (
         <Link href="/bases">
-          <MoveLeft size={20} />
+          <MoveLeft size={15} />
         </Link>
       ) : (
-        <Image src="/images/small-logo.svg" alt="Logo" width={30} height={30} />
+        <Image src="/images/small-logo.svg" alt="Logo" width={25} height={25} />
       )}
     </div>
   );
