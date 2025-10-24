@@ -49,6 +49,7 @@ export default async function BaseLayout(
           <UserAccount
             name={session.user.name ?? "User"}
             email={session.user.email ?? "No email"}
+            popupLocation="bottom-left"
           />
         </div>
       </aside>

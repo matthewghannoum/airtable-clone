@@ -28,6 +28,7 @@ export default async function Home() {
           <UserAccount
             name={session.user.name ?? "User"}
             email={session.user.email ?? "No email"}
+            popupLocation="top-right"
           />
         </div>
 
