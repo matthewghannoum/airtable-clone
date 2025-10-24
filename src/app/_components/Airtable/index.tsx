@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
@@ -43,8 +43,72 @@ export default function Airtable({ tableId }: { tableId: string }) {
   const [editingCell, setEditingCell] = useState<{
     rowId: string;
     columnId: string;
-    cellValue?: string | number | null;
+    draftValue: string;
   } | null>(null);
+  const skipBlurCommitRef = useRef(false);
+
+  const getColumnMeta = (columnId: string) =>
+    tableData?.columns.find((col) => col.id === columnId);
+
+  const toDraftValue = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    return String(value);
+  };
+
+  const parseDraftValue = (
+    columnId: string,
+    draftValue: string,
+  ): string | number | null => {
+    const column = getColumnMeta(columnId);
+
+    if (draftValue === "") {
+      return null;
+    }
+
+    if (column?.type === "number") {
+      const parsed = Number(draftValue);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    return draftValue;
+  };
+
+  const startEditing = (
+    rowId: string,
+    columnId: string,
+    value: string | number | null | undefined,
+  ) => {
+    skipBlurCommitRef.current = false;
+    setEditingCell({
+      rowId,
+      columnId,
+      draftValue: toDraftValue(value),
+    });
+  };
+
+  const finishEditing = (action: "submit" | "cancel") => {
+    if (!editingCell) {
+      return;
+    }
+
+    if (action === "submit") {
+      updateCell.mutate({
+        tableId,
+        rowId: editingCell.rowId,
+        columnId: editingCell.columnId,
+        cellValue: parseDraftValue(editingCell.columnId, editingCell.draftValue),
+      });
+    }
+
+    setEditingCell(null);
+    setSelectedCell({
+      rowId: editingCell.rowId,
+      columnId: editingCell.columnId,
+    });
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,11 +145,11 @@ export default function Airtable({ tableId }: { tableId: string }) {
         const targetRow = rows[rowIndex];
         const targetCell = targetRow?.getVisibleCells()[columnIndex];
         if (targetRow && targetCell) {
-          setEditingCell({
-            rowId: targetRow.id,
-            columnId: targetCell.column.id,
-            cellValue: targetCell.getValue() as string | number | null,
-          });
+          startEditing(
+            targetRow.id,
+            targetCell.column.id,
+            targetCell.getValue() as string | number | null,
+          );
         }
         return;
       }
@@ -198,119 +262,102 @@ export default function Airtable({ tableId }: { tableId: string }) {
                   <p className="ml-1">{rowIndex + 1}</p>
                 </TableCell>
 
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={`border-r border-neutral-300 ${
-                      editingCell?.rowId === row.id &&
-                      editingCell?.columnId === cell.column.id
-                        ? "border-2 border-blue-500 bg-white"
-                        : selectedCell?.rowId === row.id &&
-                            selectedCell?.columnId === cell.column.id
-                          ? "border-2 border-blue-400 bg-white"
-                          : ""
-                    }`}
-                    onClick={() => {
-                      if (
-                        selectedCell?.rowId === row.id &&
-                        selectedCell?.columnId === cell.column.id
-                      ) {
-                        setSelectedCell({
-                          rowId: row.id,
-                          columnId: cell.column.id,
-                        });
-                        setEditingCell({
-                          rowId: row.id,
-                          columnId: cell.column.id,
-                          cellValue: cell.getValue() as string | number | null,
-                        });
-                      } else {
-                        setSelectedCell({
-                          rowId: row.id,
-                          columnId: cell.column.id,
-                        });
-                        setEditingCell(null);
-                      }
-                    }}
+                {row.getVisibleCells().map((cell) => {
+                  const isEditingCell =
+                    editingCell?.rowId === row.id &&
+                    editingCell?.columnId === cell.column.id;
+
+                  return (
+                    <TableCell
+                      key={cell.id}
+                      className={`border-r border-neutral-300 ${
+                        isEditingCell
+                          ? "border-2 border-blue-500 bg-white"
+                          : selectedCell?.rowId === row.id &&
+                              selectedCell?.columnId === cell.column.id
+                            ? "border-2 border-blue-400 bg-white"
+                            : ""
+                      }`}
+                      onClick={() => {
+                        if (
+                          selectedCell?.rowId === row.id &&
+                          selectedCell?.columnId === cell.column.id
+                        ) {
+                          setSelectedCell({
+                            rowId: row.id,
+                            columnId: cell.column.id,
+                          });
+                          startEditing(
+                            row.id,
+                            cell.column.id,
+                            cell.getValue() as string | number | null,
+                          );
+                        } else {
+                          setSelectedCell({
+                            rowId: row.id,
+                            columnId: cell.column.id,
+                          });
+                          setEditingCell(null);
+                        }
+                      }}
                   >
-                    {editingCell?.rowId === row.id &&
-                    editingCell?.columnId === cell.column.id ? (
+                    {isEditingCell ? (
                       <input
                         autoFocus
                         className="w-full bg-transparent outline-none"
                         type={
-                          tableData?.columns.find(
-                            (col) => col.id === cell.column.id,
-                          )?.type === "number"
+                          getColumnMeta(cell.column.id)?.type === "number"
                             ? "number"
                             : "text"
                         }
-                        defaultValue={cell.getValue() as string | number}
+                        value={editingCell?.draftValue ?? ""}
                         onChange={(e) => {
-                          const value =
-                            e.target.value === ""
-                              ? null
-                              : tableData?.columns.find(
-                                    (col) => col.id === cell.column.id,
-                                  )?.type === "number"
-                                ? Number(e.target.value)
-                                : e.target.value;
+                          const { value } = e.target;
 
-                          setEditingCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                            cellValue: value,
+                          setEditingCell((current) => {
+                            if (!current) {
+                              return current;
+                            }
+
+                            if (
+                              current.rowId !== row.id ||
+                              current.columnId !== cell.column.id
+                            ) {
+                              return current;
+                            }
+
+                            return {
+                              ...current,
+                              draftValue: value,
+                            };
                           });
+
                           setSelectedCell({
                             rowId: row.id,
                             columnId: cell.column.id,
                           });
                         }}
                         onKeyDown={(e) => {
-                          if (
-                            e.key === "Enter" &&
-                            editingCell &&
-                            editingCell.cellValue !== undefined
-                          ) {
-                            updateCell.mutate({
-                              tableId,
-                              rowId: editingCell.rowId,
-                              columnId: editingCell.columnId,
-                              cellValue: editingCell.cellValue,
-                            });
-                            setEditingCell(null);
-                            setSelectedCell({
-                              rowId: editingCell.rowId,
-                              columnId: editingCell.columnId,
-                            });
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            skipBlurCommitRef.current = true;
+                            finishEditing("submit");
                           }
                           if (e.key === "Escape") {
-                            setEditingCell(null);
-                            setSelectedCell({
-                              rowId: row.id,
-                              columnId: cell.column.id,
-                            });
+                            e.preventDefault();
+                            e.stopPropagation();
+                            skipBlurCommitRef.current = true;
+                            finishEditing("cancel");
                           }
                         }}
                         onBlur={() => {
-                          if (
-                            editingCell &&
-                            editingCell.cellValue !== undefined &&
-                            editingCell.rowId === row.id &&
-                            editingCell.columnId === cell.column.id
-                          ) {
-                            updateCell.mutate({
-                              tableId,
-                              rowId: editingCell.rowId,
-                              columnId: editingCell.columnId,
-                              cellValue: editingCell.cellValue,
-                            });
-                            setEditingCell(null);
-                            setSelectedCell({
-                              rowId: editingCell.rowId,
-                              columnId: editingCell.columnId,
-                            });
+                          if (skipBlurCommitRef.current) {
+                            skipBlurCommitRef.current = false;
+                            return;
                           }
+
+                          finishEditing("submit");
                         }}
                       />
                     ) : (
@@ -322,7 +369,8 @@ export default function Airtable({ tableId }: { tableId: string }) {
                       </div>
                     )}
                   </TableCell>
-                ))}
+                  );
+                })}
               </TableRow>
             ))}
 
