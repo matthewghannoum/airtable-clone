@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
@@ -35,11 +35,106 @@ export default function Airtable({ tableId }: { tableId: string }) {
     getRowId: (_, index) => rowIds[index] ?? index.toString(),
   });
 
+  const [selectedCell, setSelectedCell] = useState<{
+    rowId: string;
+    columnId: string;
+  } | null>(null);
+
   const [editingCell, setEditingCell] = useState<{
     rowId: string;
     columnId: string;
     cellValue?: string | number | null;
   } | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const visibleColumns = table
+        .getVisibleLeafColumns()
+        .map((column) => column.id);
+
+      if (editingCell) {
+        return;
+      }
+
+      if (!selectedCell) {
+        return;
+      }
+
+      const rows = table.getRowModel().rows;
+      const rowIndex = rows.findIndex((row) => row.id === selectedCell.rowId);
+      const columnIndex = visibleColumns.findIndex(
+        (id) => id === selectedCell.columnId,
+      );
+
+      if (rowIndex === -1 || columnIndex === -1) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedCell(null);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const targetRow = rows[rowIndex];
+        const targetCell = targetRow?.getVisibleCells()[columnIndex];
+        if (targetRow && targetCell) {
+          setEditingCell({
+            rowId: targetRow.id,
+            columnId: targetCell.column.id,
+            cellValue: targetCell.getValue() as string | number | null,
+          });
+        }
+        return;
+      }
+
+      let nextRowIndex = rowIndex;
+      let nextColumnIndex = columnIndex;
+
+      switch (event.key) {
+        case "ArrowUp":
+          nextRowIndex = Math.max(0, rowIndex - 1);
+          break;
+        case "ArrowDown":
+          nextRowIndex = Math.min(rows.length - 1, rowIndex + 1);
+          break;
+        case "ArrowLeft":
+          nextColumnIndex = Math.max(0, columnIndex - 1);
+          break;
+        case "ArrowRight":
+          nextColumnIndex = Math.min(
+            visibleColumns.length - 1,
+            columnIndex + 1,
+          );
+          break;
+        default:
+          return;
+      }
+
+      if (nextRowIndex === rowIndex && nextColumnIndex === columnIndex) {
+        event.preventDefault();
+        return;
+      }
+
+      const nextRow = rows[nextRowIndex];
+      const nextCell = nextRow?.getVisibleCells()[nextColumnIndex];
+
+      if (nextRow && nextCell) {
+        event.preventDefault();
+        setSelectedCell({
+          rowId: nextRow.id,
+          columnId: nextCell.column.id,
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [editingCell, selectedCell, table]);
 
   const updateCell = api.table.updateCell.useMutation({
     onMutate: async (input) => {
@@ -103,21 +198,40 @@ export default function Airtable({ tableId }: { tableId: string }) {
                   <p className="ml-1">{rowIndex + 1}</p>
                 </TableCell>
 
-                {row.getVisibleCells().map((cell, index) => (
+                {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}
                     className={`border-r border-neutral-300 ${
                       editingCell?.rowId === row.id &&
                       editingCell?.columnId === cell.column.id
                         ? "border-2 border-blue-500 bg-white"
-                        : ""
+                        : selectedCell?.rowId === row.id &&
+                            selectedCell?.columnId === cell.column.id
+                          ? "border-2 border-blue-400 bg-white"
+                          : ""
                     }`}
-                    onClick={() =>
-                      setEditingCell({
-                        rowId: row.id,
-                        columnId: cell.column.id,
-                      })
-                    }
+                    onClick={() => {
+                      if (
+                        selectedCell?.rowId === row.id &&
+                        selectedCell?.columnId === cell.column.id
+                      ) {
+                        setSelectedCell({
+                          rowId: row.id,
+                          columnId: cell.column.id,
+                        });
+                        setEditingCell({
+                          rowId: row.id,
+                          columnId: cell.column.id,
+                          cellValue: cell.getValue() as string | number | null,
+                        });
+                      } else {
+                        setSelectedCell({
+                          rowId: row.id,
+                          columnId: cell.column.id,
+                        });
+                        setEditingCell(null);
+                      }
+                    }}
                   >
                     {editingCell?.rowId === row.id &&
                     editingCell?.columnId === cell.column.id ? (
@@ -147,11 +261,16 @@ export default function Airtable({ tableId }: { tableId: string }) {
                             columnId: cell.column.id,
                             cellValue: value,
                           });
+                          setSelectedCell({
+                            rowId: row.id,
+                            columnId: cell.column.id,
+                          });
                         }}
                         onKeyDown={(e) => {
                           if (
                             e.key === "Enter" &&
-                            editingCell?.cellValue !== undefined
+                            editingCell &&
+                            editingCell.cellValue !== undefined
                           ) {
                             updateCell.mutate({
                               tableId,
@@ -160,9 +279,37 @@ export default function Airtable({ tableId }: { tableId: string }) {
                               cellValue: editingCell.cellValue,
                             });
                             setEditingCell(null);
+                            setSelectedCell({
+                              rowId: editingCell.rowId,
+                              columnId: editingCell.columnId,
+                            });
                           }
                           if (e.key === "Escape") {
                             setEditingCell(null);
+                            setSelectedCell({
+                              rowId: row.id,
+                              columnId: cell.column.id,
+                            });
+                          }
+                        }}
+                        onBlur={() => {
+                          if (
+                            editingCell &&
+                            editingCell.cellValue !== undefined &&
+                            editingCell.rowId === row.id &&
+                            editingCell.columnId === cell.column.id
+                          ) {
+                            updateCell.mutate({
+                              tableId,
+                              rowId: editingCell.rowId,
+                              columnId: editingCell.columnId,
+                              cellValue: editingCell.cellValue,
+                            });
+                            setEditingCell(null);
+                            setSelectedCell({
+                              rowId: editingCell.rowId,
+                              columnId: editingCell.columnId,
+                            });
                           }
                         }}
                       />
