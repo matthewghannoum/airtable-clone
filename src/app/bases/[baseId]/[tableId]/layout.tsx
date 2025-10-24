@@ -7,7 +7,6 @@ import { airtables, bases } from "@/server/db/schema";
 import { redirect } from "next/navigation";
 import type { LayoutProps } from "next";
 import { eq } from "drizzle-orm";
-import Image from "next/image";
 import BackLogo from "@/app/_components/common/BackLogo";
 
 export default async function BaseLayout(
