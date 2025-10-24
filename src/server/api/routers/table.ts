@@ -1,7 +1,7 @@
 import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { and, asc, desc, eq, max, sql } from "drizzle-orm";
-import type { AnyColumn } from "drizzle-orm";
+import type { AnyColumn, SQL } from "drizzle-orm";
 import { z } from "zod";
 
 function jsonbSet(column: AnyColumn, key: string, value: unknown) {
@@ -44,12 +44,45 @@ export const tableRouter = createTRPCRouter({
       return newRow;
     }),
   get: protectedProcedure
-    .input(z.object({ tableId: z.string() }))
+    .input(
+      z.object({
+        tableId: z.string(),
+        filters: z
+          .array(
+            z.union([
+              z.object({
+                columnId: z.string(),
+                columnType: z.literal("text"),
+                operator: z.enum([
+                  "contains",
+                  "equals",
+                  "is_empty",
+                  "is_not_empty",
+                  "not_contains",
+                ]),
+                value: z.string().optional().nullable(),
+              }),
+              z.object({
+                columnId: z.string(),
+                columnType: z.literal("number"),
+                operator: z.enum(["eq", "gt", "lt"]),
+                value: z.union([z.number(), z.null()]).optional(),
+              }),
+            ]),
+          )
+          .optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const columns = await ctx.db
         .select()
         .from(airtableColumns)
         .where(eq(airtableColumns.airtableId, input.tableId));
+
+      const columnIdToType: Record<string, "text" | "number"> = {};
+      for (const column of columns) {
+        columnIdToType[column.id] = column.type;
+      }
 
       const orderBy = columns
         .map((col) => {
@@ -81,10 +114,97 @@ export const tableRouter = createTRPCRouter({
         .sort((a, b) => a.sortPriority - b.sortPriority)
         .map((c) => c.orderByComponent);
 
+      const filterConditions: SQL[] = [];
+
+      for (const filter of input.filters ?? []) {
+        const expectedType = columnIdToType[filter.columnId];
+
+        if (!expectedType || expectedType !== filter.columnType) {
+          continue;
+        }
+
+        if (filter.columnType === "text") {
+          const value = filter.value ?? undefined;
+
+          if (filter.operator === "is_not_empty") {
+            filterConditions.push(
+              sql`(${airtableRows.values} -> ${filter.columnId}) IS NOT NULL AND ${
+                airtableRows.values
+              } ->> ${filter.columnId} != ''`,
+            );
+            continue;
+          }
+
+          if (filter.operator === "is_empty") {
+            filterConditions.push(
+              sql`(${airtableRows.values} -> ${filter.columnId}) IS NULL OR ${
+                airtableRows.values
+              } ->> ${filter.columnId} = ''`,
+            );
+            continue;
+          }
+
+          if (
+            (filter.operator === "contains" ||
+              filter.operator === "not_contains" ||
+              filter.operator === "equals") &&
+            (value === undefined || value === null || value === "")
+          ) {
+            continue;
+          }
+
+          if (filter.operator === "contains") {
+            filterConditions.push(
+              sql`${airtableRows.values} ->> ${filter.columnId} ILIKE ${`%${value}%`}`,
+            );
+            continue;
+          }
+
+          if (filter.operator === "not_contains") {
+            filterConditions.push(
+              sql`${airtableRows.values} ->> ${filter.columnId} NOT ILIKE ${`%${value}%`}`,
+            );
+            continue;
+          }
+
+          if (filter.operator === "equals") {
+            filterConditions.push(
+              sql`${airtableRows.values} ->> ${filter.columnId} = ${value}`,
+            );
+          }
+        } else if (filter.columnType === "number") {
+          if (typeof filter.value !== "number" || Number.isNaN(filter.value)) {
+            continue;
+          }
+
+          const numericValueExpression = sql`(${airtableRows.values} ->> ${filter.columnId})::numeric`;
+
+          if (filter.operator === "gt") {
+            filterConditions.push(sql`${numericValueExpression} > ${filter.value}`);
+            continue;
+          }
+
+          if (filter.operator === "lt") {
+            filterConditions.push(sql`${numericValueExpression} < ${filter.value}`);
+            continue;
+          }
+
+          if (filter.operator === "eq") {
+            filterConditions.push(sql`${numericValueExpression} = ${filter.value}`);
+          }
+        }
+      }
+
+      let whereClause: SQL = eq(airtableRows.airtableId, input.tableId);
+
+      if (filterConditions.length > 0) {
+        whereClause = and(eq(airtableRows.airtableId, input.tableId), ...filterConditions);
+      }
+
       const rows = await ctx.db
         .select({ values: airtableRows.values, id: airtableRows.id })
         .from(airtableRows)
-        .where(eq(airtableRows.airtableId, input.tableId))
+        .where(whereClause)
         .orderBy(...orderBy); // airtableRows.createdTimestamp
 
       return {

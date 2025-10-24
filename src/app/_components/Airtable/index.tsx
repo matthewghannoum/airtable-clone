@@ -7,18 +7,52 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
 import TableFnRow from "../TableFnRow";
+import type { FilterWithId } from "../types";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
 
+  const [filters, setFilters] = useState<FilterWithId[]>([]);
+
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
+  const queryFilters = useMemo(
+    () =>
+      filters
+        .map(({ id, ...filter }) => filter)
+        .filter((filter) => {
+          if (filter.columnType === "number") {
+            return (
+              typeof filter.value === "number" && !Number.isNaN(filter.value)
+            );
+          }
+
+          if (
+            filter.operator === "contains" ||
+            filter.operator === "not_contains" ||
+            filter.operator === "equals"
+          ) {
+            return (
+              filter.value !== undefined &&
+              filter.value !== null &&
+              filter.value !== ""
+            );
+          }
+
+          return true;
+        }),
+    [filters],
+  );
+
+  const { data: tableData, refetch } = api.table.get.useQuery({
+    tableId,
+    filters: queryFilters.length > 0 ? queryFilters : undefined,
+  });
 
   const rowValues = tableData ? tableData.rows : [];
   const rowIds = tableData ? tableData.rowIds : [];
@@ -87,7 +121,12 @@ export default function Airtable({ tableId }: { tableId: string }) {
   return (
     <div className="flex w-full flex-col items-start justify-start">
       {tableData?.columns && (
-        <TableFnRow tableId={tableId} columns={tableData.columns} />
+        <TableFnRow
+          tableId={tableId}
+          columns={tableData.columns}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
       )}
 
       <div className="flex w-full items-start justify-start">
