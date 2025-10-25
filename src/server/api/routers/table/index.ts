@@ -4,6 +4,8 @@ import createEmptyRow from "./mutations/createEmptyRow";
 import updateSorts from "./mutations/updateSorts";
 import addColumn from "./mutations/addColumn";
 import updateCell from "./mutations/updateCell";
+import getViews from "./queries/getViews";
+import createNewView from "./mutations/createNewView";
 
 export const tableRouter = createTRPCRouter({
   get: getTable,
@@ -11,4 +13,6 @@ export const tableRouter = createTRPCRouter({
   updateSorts,
   addColumn,
   updateCell,
+  getViews,
+  createNewView,
 });
