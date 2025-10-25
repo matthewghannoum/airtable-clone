@@ -2,7 +2,7 @@ import { protectedProcedure } from "@/server/api/trpc";
 import { bases } from "@/server/db/schema";
 import addNewTable from "../utils/addNewTable";
 
-export default protectedProcedure.mutation(async ({ ctx }) => {
+const createBase = protectedProcedure.mutation(async ({ ctx }) => {
   const { user } = ctx.session;
 
   const userId = user.id;
@@ -32,3 +32,5 @@ export default protectedProcedure.mutation(async ({ ctx }) => {
 
   return { baseId, tableId };
 });
+
+export default createBase;

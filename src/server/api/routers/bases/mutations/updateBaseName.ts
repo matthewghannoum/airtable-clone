@@ -3,7 +3,7 @@ import { protectedProcedure } from "@/server/api/trpc";
 import { bases } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
-export default protectedProcedure
+const updateBaseName = protectedProcedure
   .input(
     z.object({
       baseId: z.string(),
@@ -25,3 +25,5 @@ export default protectedProcedure
 
     return result[0];
   });
+
+export default updateBaseName;

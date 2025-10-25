@@ -5,7 +5,7 @@ import z from "zod";
 import addNewTable from "../utils/addNewTable";
 import { count, eq } from "drizzle-orm";
 
-export default protectedProcedure
+const addTableToBase = protectedProcedure
   .input(
     z.object({
       tableId: z.string(),
@@ -35,3 +35,5 @@ export default protectedProcedure
 
     return { tableId };
   });
+
+export default addTableToBase;
