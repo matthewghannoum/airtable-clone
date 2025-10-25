@@ -1,4 +1,10 @@
-import { airtableColumns, airtableRows, airtables } from "@/server/db/schema";
+import {
+  airtableColumns,
+  airtableRows,
+  airtables,
+  airtableViews,
+  viewColSettings,
+} from "@/server/db/schema";
 import type { DB } from "../../../types";
 
 export default async function addNewTable(
@@ -27,23 +33,29 @@ export default async function addNewTable(
         {
           name: "Name",
           type: "text",
-          displayOrderNum: 1,
           airtableId: airtableRow.id,
         },
         {
           name: "Notes",
           type: "text",
-          displayOrderNum: 2,
           airtableId: airtableRow.id,
         },
         {
           name: "Number of PRs",
           type: "number",
-          displayOrderNum: 3,
           airtableId: airtableRow.id,
         },
       ])
       .returning();
+
+    const [defaultView] = await tx
+      .insert(airtableViews)
+      .values({ name: "Table view", airtableId: airtableRow.id })
+      .returning();
+
+    if (!defaultView) {
+      throw new Error("Failed to create the default view");
+    }
 
     const nameId = columnRows.find((col) => col.name === "Name")?.id;
     const notesId = columnRows.find((col) => col.name === "Notes")?.id;
@@ -54,6 +66,12 @@ export default async function addNewTable(
     if (!nameId || !notesId || !numberOfPrsId) {
       throw new Error("Failed to create columns");
     }
+
+    await tx.insert(viewColSettings).values([
+      { viewId: defaultView.id, columnId: nameId, displayOrderNum: 1 },
+      { viewId: defaultView.id, columnId: notesId, displayOrderNum: 2 },
+      { viewId: defaultView.id, columnId: numberOfPrsId, displayOrderNum: 3 },
+    ]);
 
     await tx.insert(airtableRows).values([
       {
