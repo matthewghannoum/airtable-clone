@@ -22,14 +22,14 @@ function createFaviconDataUrl(title: string) {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="12" ry="12" fill="oklch(41% 0.159 10.272)" />
-  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" fill="#fff" font-weight="600">${initials}</text>
+  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="36" fill="#fff">${initials}</text>
 </svg>`;
 
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
 export async function generateMetadata(
-  props: LayoutProps<"/bases/[baseId]/[tableId]">
+  props: LayoutProps<"/bases/[baseId]/[tableId]">,
 ): Promise<Metadata> {
   const { baseId } = await props.params;
 
