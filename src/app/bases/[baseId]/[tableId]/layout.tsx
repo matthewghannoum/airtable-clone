@@ -63,24 +63,30 @@ export default async function BaseLayout(
   const { children } = props;
   const { baseId, tableId } = await props.params;
 
-  const session = await auth();
-
-  if (!session?.user) redirect("/");
-
-  const [base] = await db
+  const sessionPromise = auth();
+  const basePromise = db
     .select({ name: bases.name })
     .from(bases)
     .where(eq(bases.id, baseId))
     .limit(1);
+  const tablesPromise = db
+    .select({ id: airtables.id, name: airtables.name })
+    .from(airtables)
+    .where(eq(airtables.baseId, baseId));
+
+  const [session, baseResult, tables] = await Promise.all([
+    sessionPromise,
+    basePromise,
+    tablesPromise,
+  ]);
+
+  if (!session?.user) redirect("/");
+
+  const [base] = baseResult;
 
   if (!base) {
     return <div className="w-full">Base not found</div>;
   }
-
-  const tables = await db
-    .select({ id: airtables.id, name: airtables.name })
-    .from(airtables)
-    .where(eq(airtables.baseId, baseId));
 
   if (!tables) {
     return <div className="w-full">Table not found</div>;
