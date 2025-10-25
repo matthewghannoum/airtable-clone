@@ -304,7 +304,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
                     {isEditingCell ? (
                       <input
                         autoFocus
-                        className="w-full bg-transparent outline-none"
+                        className="w-full max-w-full bg-transparent outline-none"
                         type={
                           getColumnMeta(cell.column.id)?.type === "number"
                             ? "number"
@@ -361,7 +361,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
                         }}
                       />
                     ) : (
-                      <div className="w-full">
+                      <div className="w-full max-w-full overflow-hidden text-ellipsis">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
