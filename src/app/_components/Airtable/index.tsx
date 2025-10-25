@@ -250,7 +250,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
   });
 
   return (
-    <div className="flex w-full flex-col items-start justify-start">
+    <div className="h-full w-full">
       {tableData?.columns && (
         <TableFnRow
           tableId={tableId}
@@ -259,7 +259,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
         />
       )}
 
-      <div className="flex w-full items-start justify-start">
+      <div className="flex h-full w-full items-start justify-start">
         {!isViewsBarHidden && <ATViewsBar tableId={tableId} />}
 
         <Table className="w-full border-collapse bg-white">
