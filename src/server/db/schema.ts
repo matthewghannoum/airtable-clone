@@ -108,13 +108,35 @@ export const airtableColumns = createTable("at_column", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
   name: d.varchar({ length: 255 }).notNull(),
   type: d.text({ enum: ["text", "number"] }).notNull(),
-  displayOrderNum: d.integer().notNull(),
-  sortOrder: d.text({ enum: ["asc", "desc"] }),
-  sortPriority: d.integer(),
   airtableId: d
     .uuid()
     .notNull()
     .references(() => airtables.id),
+}));
+
+export const airtableViews = createTable("at_view", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  name: d.varchar({ length: 255 }).notNull(),
+  airtableId: d
+    .uuid()
+    .notNull()
+    .references(() => airtables.id),
+}));
+
+export const viewColSettings = createTable("view_col_settings", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  viewId: d
+    .uuid()
+    .notNull()
+    .references(() => airtableViews.id),
+  columnId: d
+    .uuid()
+    .notNull()
+    .references(() => airtableColumns.id),
+  displayOrderNum: d.integer().notNull(),
+  isHidden: d.boolean().default(false),
+  sortOrder: d.text({ enum: ["asc", "desc"] }),
+  sortPriority: d.integer(),
 }));
 
 export const airtableRows = createTable("at_row", (d) => ({
