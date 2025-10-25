@@ -12,6 +12,7 @@ import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
 import TableFnRow from "../TableFnRow";
+import ATViewsBar from "./ATViewsBar";
 
 export default function Airtable({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
@@ -34,6 +35,8 @@ export default function Airtable({ tableId }: { tableId: string }) {
     getCoreRowModel: getCoreRowModel(),
     getRowId: (_, index) => rowIds[index] ?? index.toString(),
   });
+
+  const [isViewsBarHidden, setIsViewsBarHidden] = useState(true);
 
   const [selectedCell, setSelectedCell] = useState<{
     rowId: string;
@@ -99,7 +102,10 @@ export default function Airtable({ tableId }: { tableId: string }) {
         tableId,
         rowId: editingCell.rowId,
         columnId: editingCell.columnId,
-        cellValue: parseDraftValue(editingCell.columnId, editingCell.draftValue),
+        cellValue: parseDraftValue(
+          editingCell.columnId,
+          editingCell.draftValue,
+        ),
       });
     }
 
@@ -246,10 +252,16 @@ export default function Airtable({ tableId }: { tableId: string }) {
   return (
     <div className="flex w-full flex-col items-start justify-start">
       {tableData?.columns && (
-        <TableFnRow tableId={tableId} columns={tableData.columns} />
+        <TableFnRow
+          tableId={tableId}
+          columns={tableData.columns}
+          toggleViewsBar={() => setIsViewsBarHidden(!isViewsBarHidden)}
+        />
       )}
 
       <div className="flex w-full items-start justify-start">
+        {!isViewsBarHidden && <ATViewsBar tableId={tableId} />}
+
         <Table className="w-full border-collapse bg-white">
           {tableData?.columns && (
             <ATHeader table={table} columns={tableData.columns} />
@@ -300,75 +312,75 @@ export default function Airtable({ tableId }: { tableId: string }) {
                           setEditingCell(null);
                         }
                       }}
-                  >
-                    {isEditingCell ? (
-                      <input
-                        autoFocus
-                        className="w-full bg-transparent outline-none"
-                        type={
-                          getColumnMeta(cell.column.id)?.type === "number"
-                            ? "number"
-                            : "text"
-                        }
-                        value={editingCell?.draftValue ?? ""}
-                        onChange={(e) => {
-                          const { value } = e.target;
+                    >
+                      {isEditingCell ? (
+                        <input
+                          autoFocus
+                          className="w-full bg-transparent outline-none"
+                          type={
+                            getColumnMeta(cell.column.id)?.type === "number"
+                              ? "number"
+                              : "text"
+                          }
+                          value={editingCell?.draftValue ?? ""}
+                          onChange={(e) => {
+                            const { value } = e.target;
 
-                          setEditingCell((current) => {
-                            if (!current) {
-                              return current;
+                            setEditingCell((current) => {
+                              if (!current) {
+                                return current;
+                              }
+
+                              if (
+                                current.rowId !== row.id ||
+                                current.columnId !== cell.column.id
+                              ) {
+                                return current;
+                              }
+
+                              return {
+                                ...current,
+                                draftValue: value,
+                              };
+                            });
+
+                            setSelectedCell({
+                              rowId: row.id,
+                              columnId: cell.column.id,
+                            });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              skipBlurCommitRef.current = true;
+                              finishEditing("submit");
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              skipBlurCommitRef.current = true;
+                              finishEditing("cancel");
+                            }
+                          }}
+                          onBlur={() => {
+                            if (skipBlurCommitRef.current) {
+                              skipBlurCommitRef.current = false;
+                              return;
                             }
 
-                            if (
-                              current.rowId !== row.id ||
-                              current.columnId !== cell.column.id
-                            ) {
-                              return current;
-                            }
-
-                            return {
-                              ...current,
-                              draftValue: value,
-                            };
-                          });
-
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            skipBlurCommitRef.current = true;
                             finishEditing("submit");
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            skipBlurCommitRef.current = true;
-                            finishEditing("cancel");
-                          }
-                        }}
-                        onBlur={() => {
-                          if (skipBlurCommitRef.current) {
-                            skipBlurCommitRef.current = false;
-                            return;
-                          }
-
-                          finishEditing("submit");
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                   );
                 })}
               </TableRow>
