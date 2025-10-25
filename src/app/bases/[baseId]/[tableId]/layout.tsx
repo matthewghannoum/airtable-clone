@@ -31,7 +31,7 @@ function createFaviconDataUrl(title: string) {
 export async function generateMetadata(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
 ): Promise<Metadata> {
-  const { baseId } = await props.params;
+  const { baseId, tableId } = await props.params;
 
   const [base] = await db
     .select({ name: bases.name })
@@ -41,8 +41,16 @@ export async function generateMetadata(
 
   const baseName = base?.name ?? "Base";
 
+  const [table] = await db
+    .select({ name: airtables.name })
+    .from(airtables)
+    .where(eq(airtables.id, tableId))
+    .limit(1);
+
+  const tableName = table?.name ?? "Table";
+
   return {
-    title: baseName,
+    title: `${baseName}: ${tableName} - Airtable`,
     icons: {
       icon: createFaviconDataUrl(baseName),
     },
