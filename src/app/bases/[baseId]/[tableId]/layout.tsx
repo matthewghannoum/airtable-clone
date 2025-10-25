@@ -1,13 +1,53 @@
 import BaseTitle from "@/app/_components/BaseTitle";
 import TableTabs from "@/app/_components/TableTabs";
 import UserAccount from "@/app/_components/UserAccount";
+import BackLogo from "@/app/_components/common/BackLogo";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
-import { redirect } from "next/navigation";
-import type LayoutProps from "next";
 import { eq } from "drizzle-orm";
-import BackLogo from "@/app/_components/common/BackLogo";
+import type { Metadata } from "next";
+import type LayoutProps from "next";
+import { redirect } from "next/navigation";
+import { Buffer } from "buffer";
+
+function createFaviconDataUrl(title: string) {
+  const trimmedTitle = title.trim() || "Base";
+  const initials = (() => {
+    const characters = Array.from(trimmedTitle).filter((char) => char.trim());
+    const firstTwo = characters.slice(0, 2).join("");
+    return (firstTwo || "BA").toUpperCase();
+  })();
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" ry="12" fill="oklch(41% 0.159 10.272)" />
+  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" fill="#fff" font-weight="600">${initials}</text>
+</svg>`;
+
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+export async function generateMetadata(
+  props: LayoutProps<"/bases/[baseId]/[tableId]">
+): Promise<Metadata> {
+  const { baseId } = await props.params;
+
+  const [base] = await db
+    .select({ name: bases.name })
+    .from(bases)
+    .where(eq(bases.id, baseId))
+    .limit(1);
+
+  const baseName = base?.name ?? "Base";
+
+  return {
+    title: baseName,
+    icons: {
+      icon: createFaviconDataUrl(baseName),
+    },
+  };
+}
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
