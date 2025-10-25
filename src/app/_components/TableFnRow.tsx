@@ -1,11 +1,10 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   ArrowDownUp,
   CircleQuestionMark,
   EyeOff,
   ListFilter,
+  Menu,
   MoveRight,
   Plus,
   Tally5,
@@ -314,27 +313,37 @@ function SortTool({
 export default function TableFnRow({
   tableId,
   columns,
+  toggleViewsBar,
 }: {
   tableId: string;
   columns: Column[];
+  toggleViewsBar: () => void;
 }) {
   return (
-    <div className="flex w-full items-center justify-end gap-1 border-t border-b border-neutral-300 p-1">
-      <Button variant="ghost">
-        <div className="flex items-center justify-center gap-2">
-          <EyeOff size={20} />
-          <p>Hide fields</p>
-        </div>
-      </Button>
+    <div className="flex w-full items-center justify-between gap-1 border-t border-b border-neutral-300 p-1">
+      <Menu
+        className="ml-3 cursor-pointer"
+        size={20}
+        onClick={toggleViewsBar}
+      />
 
-      <Button variant="ghost">
-        <div className="flex items-center justify-center gap-2">
-          <ListFilter size={20} />
-          <p>Filter</p>
-        </div>
-      </Button>
+      <div className="flex items-center justify-between gap-1">
+        <Button variant="ghost">
+          <div className="flex items-center justify-center gap-2">
+            <EyeOff size={20} />
+            <p>Hide fields</p>
+          </div>
+        </Button>
 
-      <SortTool tableId={tableId} columns={columns} />
+        <Button variant="ghost">
+          <div className="flex items-center justify-center gap-2">
+            <ListFilter size={20} />
+            <p>Filter</p>
+          </div>
+        </Button>
+
+        <SortTool tableId={tableId} columns={columns} />
+      </div>
     </div>
   );
 }
