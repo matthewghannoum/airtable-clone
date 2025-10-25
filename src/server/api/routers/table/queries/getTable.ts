@@ -1,15 +1,43 @@
 import { protectedProcedure } from "@/server/api/trpc";
-import { airtableColumns, airtableRows } from "@/server/db/schema";
+import {
+  airtableColumns,
+  airtableRows,
+  viewColSettings,
+} from "@/server/db/schema";
 import { eq, sql } from "drizzle-orm";
 import z from "zod";
 
-const getTable = protectedProcedure
-  .input(z.object({ tableId: z.string() }))
+const getView = protectedProcedure
+  .input(z.object({ tableId: z.string(), viewId: z.string().optional() }))
   .query(async ({ ctx, input }) => {
-    const columns = await ctx.db
+    const viewSettings = await ctx.db
       .select()
       .from(airtableColumns)
+      .leftJoin(
+        viewColSettings,
+        eq(viewColSettings.columnId, airtableColumns.id),
+      )
       .where(eq(airtableColumns.airtableId, input.tableId));
+
+    const columns = viewSettings.map(
+      ({ at_column: col, view_col_settings }) => {
+        if (!view_col_settings)
+          return {
+            ...col,
+            displayOrderNum: null,
+            isHidden: null,
+            sortOrder: null,
+            sortPriority: null,
+          };
+
+        const { displayOrderNum, isHidden, sortOrder, sortPriority } =
+          view_col_settings;
+        return {
+          ...col,
+          ...{ displayOrderNum, isHidden, sortOrder, sortPriority },
+        };
+      },
+    );
 
     const orderBy = columns
       .map((col) => {
@@ -54,4 +82,4 @@ const getTable = protectedProcedure
     };
   });
 
-export default getTable;
+export default getView;
