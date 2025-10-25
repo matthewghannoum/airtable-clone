@@ -1,9 +1,10 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { createBaseFaviconDataUrl, getBaseTitle } from "@/lib/baseMetadata";
 import { api } from "@/trpc/react";
 import { SquarePen } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function BaseTitle({
   title,
@@ -12,8 +13,12 @@ export default function BaseTitle({
   title: string;
   baseId: string;
 }) {
-  const [currentTitle, setCurrentTitle] = useState(title);
+  const [currentTitle, setCurrentTitle] = useState(() => getBaseTitle(title));
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setCurrentTitle(getBaseTitle(title));
+  }, [title]);
 
   const updateName = api.bases.updateName.useMutation({
     onMutate: ({ name }) => {
@@ -21,6 +26,32 @@ export default function BaseTitle({
       setIsEditing(false);
     },
   });
+
+  useEffect(() => {
+    if (isEditing) {
+      return;
+    }
+
+    const safeTitle = getBaseTitle(currentTitle);
+    const faviconHref = createBaseFaviconDataUrl(safeTitle);
+
+    if (typeof document !== "undefined") {
+      document.title = safeTitle;
+
+      const existingLink = document.head.querySelector(
+        "link[rel*='icon']"
+      ) as HTMLLinkElement | null;
+
+      const iconLink = existingLink ?? document.createElement("link");
+      iconLink.rel = "icon";
+      iconLink.type = "image/svg+xml";
+      iconLink.href = faviconHref;
+
+      if (!iconLink.parentElement) {
+        document.head.appendChild(iconLink);
+      }
+    }
+  }, [currentTitle, isEditing]);
 
   return (
     <>

@@ -1,13 +1,35 @@
 import BaseTitle from "@/app/_components/BaseTitle";
 import TableTabs from "@/app/_components/TableTabs";
 import UserAccount from "@/app/_components/UserAccount";
+import BackLogo from "@/app/_components/common/BackLogo";
+import { createBaseFaviconDataUrl, getBaseTitle } from "@/lib/baseMetadata";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { airtables, bases } from "@/server/db/schema";
-import { redirect } from "next/navigation";
-import type LayoutProps from "next";
 import { eq } from "drizzle-orm";
-import BackLogo from "@/app/_components/common/BackLogo";
+import type { Metadata } from "next";
+import type LayoutProps from "next";
+import { redirect } from "next/navigation";
+export async function generateMetadata(
+  props: LayoutProps<"/bases/[baseId]/[tableId]">
+): Promise<Metadata> {
+  const { baseId } = await props.params;
+
+  const [base] = await db
+    .select({ name: bases.name })
+    .from(bases)
+    .where(eq(bases.id, baseId))
+    .limit(1);
+
+  const baseTitle = getBaseTitle(base?.name);
+
+  return {
+    title: baseTitle,
+    icons: {
+      icon: createBaseFaviconDataUrl(baseTitle),
+    },
+  };
+}
 
 export default async function BaseLayout(
   props: LayoutProps<"/bases/[baseId]/[tableId]">,
@@ -56,7 +78,7 @@ export default async function BaseLayout(
 
       <div className="flex h-full flex-1 flex-col">
         <div className="flex h-12 w-full items-center border-b-1 border-neutral-200 bg-white px-4 text-sm font-medium shadow-sm">
-          <BaseTitle baseId={baseId} title={base.name} />
+          <BaseTitle baseId={baseId} title={baseTitle} />
         </div>
 
         <div className="flex h-full flex-1 flex-col overflow-hidden p-4">
