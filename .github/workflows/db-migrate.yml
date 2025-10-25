@@ -1,7 +1,7 @@
 name: Run DB Migrations
 
 on:
-  workflow_dispatch: # allows manual trigger in GitHub UI
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -10,27 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "pnpm"
+          node-version: "20" # keep this simple; avoid matrix or files for now
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      # Use Corepack to provide pnpm reliably
+      - name: Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+          node -v
+          pnpm -v
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate database schema
+      - name: Generate DB
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm run db:generate
 
-      - name: Run database migrations
+      - name: Run migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm run db:migrate
