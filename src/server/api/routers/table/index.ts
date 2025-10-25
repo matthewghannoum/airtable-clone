@@ -6,6 +6,7 @@ import addColumn from "./mutations/addColumn";
 import updateCell from "./mutations/updateCell";
 import getViews from "./queries/getViews";
 import createNewView from "./mutations/createNewView";
+import updateViewName from "./mutations/updateViewName";
 
 export const tableRouter = createTRPCRouter({
   get: getTable,
@@ -15,4 +16,5 @@ export const tableRouter = createTRPCRouter({
   updateCell,
   getViews,
   createNewView,
+  updateViewName,
 });
