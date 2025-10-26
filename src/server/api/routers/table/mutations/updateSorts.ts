@@ -1,5 +1,5 @@
 import { protectedProcedure } from "@/server/api/trpc";
-import { airtableColumns } from "@/server/db/schema";
+import { viewColSettings } from "@/server/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import z from "zod";
 
@@ -7,6 +7,7 @@ const updateSorts = protectedProcedure
   .input(
     z.object({
       tableId: z.string(),
+      viewId: z.string(),
       sorts: z.array(
         z.object({
           columnId: z.string(),
@@ -17,18 +18,15 @@ const updateSorts = protectedProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
-    // update the sort order and priority of the specified columns
-    for (const sort of input.sorts) {
+    // update the sort order and priority of the specified columns for a given view
+    for (const { columnId, sortOrder, sortPriority } of input.sorts) {
       await ctx.db
-        .update(airtableColumns)
-        .set({
-          sortOrder: sort.sortOrder,
-          sortPriority: sort.sortPriority,
-        })
+        .update(viewColSettings)
+        .set({ sortOrder, sortPriority })
         .where(
           and(
-            eq(airtableColumns.airtableId, input.tableId),
-            eq(airtableColumns.id, sort.columnId),
+            eq(viewColSettings.id, input.viewId),
+            eq(viewColSettings.columnId, columnId),
           ),
         );
     }
@@ -36,16 +34,16 @@ const updateSorts = protectedProcedure
     // if a column is not in the input sorts, clear its sortOrder and sortPriority
     if (input.sorts.length > 0) {
       await ctx.db
-        .update(airtableColumns)
+        .update(viewColSettings)
         .set({
           sortOrder: null,
           sortPriority: null,
         })
         .where(
           and(
-            eq(airtableColumns.airtableId, input.tableId),
+            eq(viewColSettings.viewId, input.viewId),
             // airtableColumns.id not in input.sorts.map(s => s.columnId)
-            sql`${airtableColumns.id} NOT IN (${sql.join(
+            sql`${viewColSettings.columnId} NOT IN (${sql.join(
               input.sorts.map((s) => sql`${s.columnId}`),
               sql`,`,
             )})`,
@@ -53,12 +51,12 @@ const updateSorts = protectedProcedure
         );
     } else {
       await ctx.db
-        .update(airtableColumns)
+        .update(viewColSettings)
         .set({
           sortOrder: null,
           sortPriority: null,
         })
-        .where(eq(airtableColumns.airtableId, input.tableId));
+        .where(eq(viewColSettings.viewId, input.viewId));
     }
   });
 
