@@ -14,12 +14,21 @@ import ATAddCol from "./ATAddCol";
 import TableFnRow from "../TableFnRow";
 import ATViewsBar from "./ATViewsBar";
 
-export default function Airtable({ tableId }: { tableId: string }) {
+export default function Airtable({
+  tableId,
+  viewId,
+}: {
+  tableId: string;
+  viewId: string;
+}) {
   const utils = api.useUtils();
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
+  const { data: tableData, refetch } = api.table.get.useQuery({
+    tableId,
+    viewId,
+  });
 
   const rowValues = tableData ? tableData.rows : [];
   const rowIds = tableData ? tableData.rowIds : [];
@@ -260,7 +269,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
       )}
 
       <div className="flex h-full w-full items-start justify-start">
-        {!isViewsBarHidden && <ATViewsBar tableId={tableId} />}
+        {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
 
         <Table className="w-full border-collapse bg-white">
           {tableData?.columns && (
