@@ -7,7 +7,7 @@ import {
 import { eq, sql } from "drizzle-orm";
 import z from "zod";
 
-const getView = protectedProcedure
+const getTableByView = protectedProcedure
   .input(z.object({ tableId: z.string(), viewId: z.string().optional() }))
   .query(async ({ ctx, input }) => {
     const viewSettings = await ctx.db
@@ -82,4 +82,4 @@ const getView = protectedProcedure
     };
   });
 
-export default getView;
+export default getTableByView;
