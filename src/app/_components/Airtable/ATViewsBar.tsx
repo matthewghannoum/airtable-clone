@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function ATViewsBar({
   tableId,
@@ -17,6 +18,16 @@ export default function ATViewsBar({
   viewId: string;
 }) {
   const utils = api.useUtils();
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  function redirectToView(viewId: string) {
+    const parts = pathname.split("/");
+    parts[parts.length - 1] = viewId; // replace last segment
+    const newPath = parts.join("/");
+    router.replace(newPath); // replace() prevents adding a new history entry
+  }
 
   const [editView, setEditView] = useState<
     { id: string; name: string; airtableId: string } | undefined
@@ -79,6 +90,7 @@ export default function ATViewsBar({
         <div
           key={index}
           className={`hover:bg-accent ${id === viewId ? "bg-accent" : ""} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-4 py-2`}
+          onClick={() => redirectToView(id)}
         >
           {!editView || editView.id != id ? (
             <p className="text-sm">{name}</p>
