@@ -2,7 +2,8 @@ import { protectedProcedure } from "@/server/api/trpc";
 import {
   airtableColumns,
   airtableRows,
-  viewColSettings,
+  viewDisplaySettings,
+  viewSorts,
 } from "@/server/db/schema";
 import { eq, sql } from "drizzle-orm";
 import z from "zod";
@@ -13,28 +14,32 @@ const getTableByView = protectedProcedure
     const viewSettings = await ctx.db
       .select()
       .from(airtableColumns)
+      .leftJoin(viewSorts, eq(viewSorts.columnId, airtableColumns.id))
       .leftJoin(
-        viewColSettings,
-        eq(viewColSettings.columnId, airtableColumns.id),
+        viewDisplaySettings,
+        eq(viewDisplaySettings.columnId, airtableColumns.id),
       )
       .where(eq(airtableColumns.airtableId, input.tableId));
 
     const columns = viewSettings.map(
-      ({ at_column: col, view_col_settings }) => {
-        if (!view_col_settings)
+      ({ at_column: col, view_sorts, view_displays }) => {
+        const displayOrderNum = view_displays?.displayOrderNum ?? 0;
+        const isHidden = view_displays?.isHidden ?? false;
+
+        if (!view_sorts)
           return {
             ...col,
-            displayOrderNum: null,
-            isHidden: null,
             sortOrder: null,
             sortPriority: null,
+            displayOrderNum,
+            isHidden,
           };
 
-        const { displayOrderNum, isHidden, sortOrder, sortPriority } =
-          view_col_settings;
+        const { sortOrder, sortPriority } = view_sorts;
+
         return {
           ...col,
-          ...{ displayOrderNum, isHidden, sortOrder, sortPriority },
+          ...{ sortOrder, sortPriority, displayOrderNum, isHidden },
         };
       },
     );

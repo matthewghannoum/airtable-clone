@@ -220,10 +220,10 @@ export default function Airtable({
       const { rowId, columnId, cellValue } = input;
 
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId });
+      await utils.table.get.cancel({ tableId, viewId });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId });
+      const prev = utils.table.get.getData({ tableId, viewId });
 
       // 3) update cache optimistically
       if (prev) {
@@ -237,7 +237,7 @@ export default function Airtable({
           return row;
         });
 
-        utils.table.get.setData({ tableId }, () => ({
+        utils.table.get.setData({ tableId, viewId }, () => ({
           columns: prev.columns,
           rows: newRows,
           rowIds: prev.rowIds,
@@ -249,12 +249,12 @@ export default function Airtable({
     },
     onError: (err, newTodo, context) => {
       if (context?.prev) {
-        utils.table.get.setData({ tableId }, context.prev);
+        utils.table.get.setData({ tableId, viewId }, context.prev);
       }
     },
     // Always refetch after error or success:
     onSettled: () => {
-      void utils.table.get.invalidate({ tableId });
+      void utils.table.get.invalidate({ tableId, viewId });
     },
   });
 
@@ -263,6 +263,7 @@ export default function Airtable({
       {tableData?.columns && (
         <TableFnRow
           tableId={tableId}
+          viewId={viewId}
           columns={tableData.columns}
           toggleViewsBar={() => setIsViewsBarHidden(!isViewsBarHidden)}
         />

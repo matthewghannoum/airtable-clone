@@ -3,7 +3,7 @@ import {
   airtableRows,
   airtables,
   airtableViews,
-  viewColSettings,
+  viewDisplaySettings,
 } from "@/server/db/schema";
 import type { DB } from "../../../types";
 
@@ -67,7 +67,7 @@ export default async function addNewTable(
       throw new Error("Failed to create columns");
     }
 
-    await tx.insert(viewColSettings).values([
+    await tx.insert(viewDisplaySettings).values([
       { viewId: defaultView.id, columnId: nameId, displayOrderNum: 1 },
       { viewId: defaultView.id, columnId: notesId, displayOrderNum: 2 },
       { viewId: defaultView.id, columnId: numberOfPrsId, displayOrderNum: 3 },
