@@ -5,16 +5,22 @@ import {
   viewDisplaySettings,
   viewSorts,
 } from "@/server/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import z from "zod";
 
 const getTableByView = protectedProcedure
-  .input(z.object({ tableId: z.string(), viewId: z.string().optional() }))
+  .input(z.object({ tableId: z.string(), viewId: z.string() }))
   .query(async ({ ctx, input }) => {
     const viewSettings = await ctx.db
       .select()
       .from(airtableColumns)
-      .leftJoin(viewSorts, eq(viewSorts.columnId, airtableColumns.id))
+      .leftJoin(
+        viewSorts,
+        and(
+          eq(viewSorts.columnId, airtableColumns.id),
+          eq(viewSorts.viewId, input.viewId),
+        ),
+      )
       .leftJoin(
         viewDisplaySettings,
         eq(viewDisplaySettings.columnId, airtableColumns.id),
