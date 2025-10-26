@@ -1,6 +1,6 @@
 import { api } from "@/trpc/react";
 import PopoverListItem from "../common/PopoverListItem";
-import { Delete, Ellipsis, Pencil, Plus, Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -9,7 +9,13 @@ import {
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 
-export default function ATViewsBar({ tableId }: { tableId: string }) {
+export default function ATViewsBar({
+  tableId,
+  viewId,
+}: {
+  tableId: string;
+  viewId: string;
+}) {
   const utils = api.useUtils();
 
   const [editView, setEditView] = useState<
@@ -38,7 +44,7 @@ export default function ATViewsBar({ tableId }: { tableId: string }) {
   });
 
   const updateViewName = api.table.updateViewName.useMutation({
-    onMutate: async ({ viewId }) => {
+    onMutate: async () => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
       await utils.table.getViews.cancel({ tableId });
 
@@ -72,7 +78,7 @@ export default function ATViewsBar({ tableId }: { tableId: string }) {
       {data?.map(({ name, id, airtableId }, index) => (
         <div
           key={index}
-          className="hover:bg-accent flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-4 py-2"
+          className={`hover:bg-accent ${id === viewId ? "bg-accent" : ""} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-4 py-2`}
         >
           {!editView || editView.id != id ? (
             <p className="text-sm">{name}</p>
