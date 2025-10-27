@@ -65,7 +65,7 @@ const getTableByView = protectedProcedure
               : sql`${airtableRows.values} ->> ${col.id}`;
 
           // append direction as a constant (validated above)
-          const orderExpr = sql`${baseExpr} ${sql.raw(dir)}`;
+          const orderExpr = sql`${baseExpr} ${sql.raw(dir)} NULLS LAST`;
           return {
             orderByComponent: orderExpr,
             // col.sortOrder === "asc"
