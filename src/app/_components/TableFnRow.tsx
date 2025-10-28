@@ -117,6 +117,29 @@ function SortTool({
     },
   });
 
+  const removeSort = api.table.removeSort.useMutation({
+    onMutate: async ({ settingId, viewId }) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.getSorts.cancel({ viewId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.getSorts.getData({ viewId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        utils.table.getSorts.setData({ viewId }, () =>
+          prev.filter((sort) => sort.id !== settingId),
+        );
+      }
+
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+    onSuccess: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
+
   const updateSortOrder = api.table.updateSortOrder.useMutation({
     onMutate: async (input) => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
@@ -253,7 +276,12 @@ function SortTool({
                     <X
                       size={25}
                       className="ml-2 cursor-pointer"
-                      // onClick={() => removeSort(sortColumn.id)}
+                      onClick={() =>
+                        removeSort.mutate({
+                          settingId: sortSetting.id,
+                          viewId: sortSetting.viewId,
+                        })
+                      }
                     />
                   </div>
                 ))}
