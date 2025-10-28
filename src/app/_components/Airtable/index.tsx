@@ -399,6 +399,7 @@ export default function Airtable({
             {tableData?.columns && (
               <ATAddRow
                 tableId={tableId}
+                viewId={viewId}
                 columns={tableData.columns}
                 refetch={async () => {
                   await refetch();

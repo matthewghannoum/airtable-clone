@@ -5,10 +5,12 @@ import { api } from "@/trpc/react";
 
 export default function ATAddRow({
   tableId,
+  viewId,
   columns,
   refetch,
 }: {
   tableId: string;
+  viewId: string;
   columns: Column[];
   refetch: () => Promise<void>;
 }) {
@@ -18,10 +20,10 @@ export default function ATAddRow({
     onMutate: async ({ rowId }) => {
       console.log("rowId", rowId);
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId });
+      await utils.table.get.cancel({ tableId, viewId });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId });
+      const prev = utils.table.get.getData({ tableId, viewId });
 
       // 3) update cache optimistically
       if (prev) {
@@ -33,7 +35,7 @@ export default function ATAddRow({
           {} as Record<string, null>,
         );
 
-        utils.table.get.setData({ tableId }, () => ({
+        utils.table.get.setData({ tableId, viewId }, () => ({
           columns: prev.columns,
           rows: [...prev.rows, emptyRow],
           rowIds: [...prev.rowIds, rowId],

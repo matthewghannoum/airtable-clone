@@ -29,7 +29,7 @@ function createFaviconDataUrl(title: string) {
 }
 
 export async function generateMetadata(
-  props: LayoutProps<"/bases/[baseId]/[tableId]">,
+  props: LayoutProps<"/bases/[baseId]/[tableId]/[viewId]">,
 ): Promise<Metadata> {
   const { baseId, tableId } = await props.params;
 
@@ -58,7 +58,7 @@ export async function generateMetadata(
 }
 
 export default async function BaseLayout(
-  props: LayoutProps<"/bases/[baseId]/[tableId]">,
+  props: LayoutProps<"/bases/[baseId]/[tableId]/[viewId]">,
 ) {
   const { children } = props;
   const { baseId, tableId } = await props.params;
