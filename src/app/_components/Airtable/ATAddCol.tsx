@@ -17,7 +17,13 @@ import { Plus, Tally5, TextInitial } from "lucide-react";
 import { useState } from "react";
 import PopoverListItem from "../common/PopoverListItem";
 
-export default function ATAddCol({ tableId }: { tableId: string }) {
+export default function ATAddCol({
+  tableId,
+  viewId,
+}: {
+  tableId: string;
+  viewId: string;
+}) {
   const utils = api.useUtils();
 
   const [isAddingCol, setIsAddingCol] = useState(false);
@@ -25,12 +31,12 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
   const [colName, setColName] = useState<string | null>(null);
 
   const addCol = api.table.addColumn.useMutation({
-    onMutate: async ({ columnId, name, type }) => {
+    onMutate: async ({ columnId, name, type, tableId }) => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId });
+      await utils.table.get.cancel({ tableId, viewId });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId });
+      const prev = utils.table.get.getData({ tableId, viewId });
 
       // 3) update cache optimistically
       if (prev) {
@@ -42,9 +48,10 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
           airtableId: tableId,
           sortOrder: null,
           sortPriority: null,
+          isHidden: false,
         };
 
-        utils.table.get.setData({ tableId }, () => ({
+        utils.table.get.setData({ tableId, viewId }, () => ({
           columns: [...prev.columns, newCol],
           rows: prev.rows,
           rowIds: prev.rowIds,
@@ -124,6 +131,7 @@ export default function ATAddCol({ tableId }: { tableId: string }) {
                         addCol.mutate({
                           columnId: crypto.randomUUID(),
                           tableId,
+                          viewId,
                           name: colName,
                           type: colType,
                         });

@@ -408,7 +408,7 @@ export default function Airtable({
           </TableBody>
         </Table>
 
-        <ATAddCol tableId={tableId} />
+        <ATAddCol tableId={tableId} viewId={viewId} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { protectedProcedure } from "@/server/api/trpc";
-import { airtableColumns } from "@/server/db/schema";
-import { eq, max, sql } from "drizzle-orm";
+import { airtableColumns, viewDisplaySettings } from "@/server/db/schema";
+import { sql } from "drizzle-orm";
 import z from "zod";
 
 const addColumn = protectedProcedure
@@ -8,30 +8,24 @@ const addColumn = protectedProcedure
     z.object({
       columnId: z.string(),
       tableId: z.string(),
+      viewId: z.string(),
       name: z.string().min(1).max(100),
       type: z.enum(["text", "number"]),
     }),
   )
   .mutation(async ({ ctx, input }) => {
-    const maxOrderNum = ctx.db
-      .select({
-        maxOrderNum: max(airtableColumns.displayOrderNum),
-      })
-      .from(airtableColumns)
-      .where(eq(airtableColumns.airtableId, input.tableId));
+    await ctx.db.insert(airtableColumns).values({
+      id: input.columnId,
+      airtableId: input.tableId,
+      name: input.name,
+      type: input.type,
+    });
 
-    const [newColumn] = await ctx.db
-      .insert(airtableColumns)
-      .values({
-        id: input.columnId,
-        airtableId: input.tableId,
-        name: input.name,
-        type: input.type,
-        displayOrderNum: sql`COALESCE((${maxOrderNum}), 0) + 1`,
-      })
-      .returning();
-
-    return newColumn;
+    await ctx.db.insert(viewDisplaySettings).values({
+      viewId: input.viewId,
+      columnId: input.columnId,
+      displayOrderNum: sql`(SELECT COUNT(*) + 1 FROM ${viewDisplaySettings} WHERE ${viewDisplaySettings.viewId} = ${input.viewId})`,
+    });
   });
 
 export default addColumn;
