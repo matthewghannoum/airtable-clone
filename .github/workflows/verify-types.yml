@@ -1,0 +1,57 @@
+name: Verify types with Next.js build
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: typecheck-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  next-build:
+    name: next build (type-check)
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: production
+      CI: true
+      NEXT_TELEMETRY_DISABLED: 1
+      SKIP_ENV_VALIDATION: 1 # for T3 stack or similar env validation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS and enable Corepack
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            **/pnpm-lock.yaml
+
+      - name: Enable Corepack (required for pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-cache-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx', 'next.config.*') }}
+          restore-keys: |
+            next-cache-${{ runner.os }}-
+
+      - name: Build (runs TypeScript type-check)
+        run: pnpm run build
+        # If you want to skip linting inside build:
+        # run: pnpm next build --no-lint
+
+      - name: Ensure tsconfig.json exists
+        if: ${{ always() }}
+        run: |
+          test -f tsconfig.json || (echo "tsconfig.json missing." && exit 1)
