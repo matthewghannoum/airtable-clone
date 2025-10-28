@@ -85,7 +85,7 @@ export default function MenuBar() {
           className="mt-3 rounded-md bg-blue-500 py-2"
           onClick={() => createBase.mutate()}
         >
-          <div className="flex w-full items-center justify-center gap-2">
+          <div className="flex w-full cursor-pointer items-center justify-center gap-2">
             <Plus color="white" size={20} />
             <p className="text-sm text-white">Create</p>
           </div>

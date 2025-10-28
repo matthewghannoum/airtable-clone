@@ -12,13 +12,23 @@ import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
 import TableFnRow from "../TableFnRow";
+import ATViewsBar from "./ATViewsBar";
 
-export default function Airtable({ tableId }: { tableId: string }) {
+export default function Airtable({
+  tableId,
+  viewId,
+}: {
+  tableId: string;
+  viewId: string;
+}) {
   const utils = api.useUtils();
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data: tableData, refetch } = api.table.get.useQuery({ tableId });
+  const { data: tableData, refetch } = api.table.get.useQuery({
+    tableId,
+    viewId,
+  });
 
   const rowValues = tableData ? tableData.rows : [];
   const rowIds = tableData ? tableData.rowIds : [];
@@ -34,6 +44,8 @@ export default function Airtable({ tableId }: { tableId: string }) {
     getCoreRowModel: getCoreRowModel(),
     getRowId: (_, index) => rowIds[index] ?? index.toString(),
   });
+
+  const [isViewsBarHidden, setIsViewsBarHidden] = useState(true);
 
   const [selectedCell, setSelectedCell] = useState<{
     rowId: string;
@@ -99,7 +111,10 @@ export default function Airtable({ tableId }: { tableId: string }) {
         tableId,
         rowId: editingCell.rowId,
         columnId: editingCell.columnId,
-        cellValue: parseDraftValue(editingCell.columnId, editingCell.draftValue),
+        cellValue: parseDraftValue(
+          editingCell.columnId,
+          editingCell.draftValue,
+        ),
       });
     }
 
@@ -205,10 +220,10 @@ export default function Airtable({ tableId }: { tableId: string }) {
       const { rowId, columnId, cellValue } = input;
 
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId });
+      await utils.table.get.cancel({ tableId, viewId });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId });
+      const prev = utils.table.get.getData({ tableId, viewId });
 
       // 3) update cache optimistically
       if (prev) {
@@ -222,7 +237,7 @@ export default function Airtable({ tableId }: { tableId: string }) {
           return row;
         });
 
-        utils.table.get.setData({ tableId }, () => ({
+        utils.table.get.setData({ tableId, viewId }, () => ({
           columns: prev.columns,
           rows: newRows,
           rowIds: prev.rowIds,
@@ -234,22 +249,29 @@ export default function Airtable({ tableId }: { tableId: string }) {
     },
     onError: (err, newTodo, context) => {
       if (context?.prev) {
-        utils.table.get.setData({ tableId }, context.prev);
+        utils.table.get.setData({ tableId, viewId }, context.prev);
       }
     },
     // Always refetch after error or success:
     onSettled: () => {
-      void utils.table.get.invalidate({ tableId });
+      void utils.table.get.invalidate({ tableId, viewId });
     },
   });
 
   return (
-    <div className="flex w-full flex-col items-start justify-start">
+    <div className="h-full w-full">
       {tableData?.columns && (
-        <TableFnRow tableId={tableId} columns={tableData.columns} />
+        <TableFnRow
+          tableId={tableId}
+          viewId={viewId}
+          columns={tableData.columns}
+          toggleViewsBar={() => setIsViewsBarHidden(!isViewsBarHidden)}
+        />
       )}
 
-      <div className="flex w-full items-start justify-start">
+      <div className="flex h-full w-full items-start justify-start">
+        {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
+
         <Table className="w-full border-collapse bg-white">
           {tableData?.columns && (
             <ATHeader table={table} columns={tableData.columns} />
@@ -300,75 +322,75 @@ export default function Airtable({ tableId }: { tableId: string }) {
                           setEditingCell(null);
                         }
                       }}
-                  >
-                    {isEditingCell ? (
-                      <input
-                        autoFocus
-                        className="w-full bg-transparent outline-none"
-                        type={
-                          getColumnMeta(cell.column.id)?.type === "number"
-                            ? "number"
-                            : "text"
-                        }
-                        value={editingCell?.draftValue ?? ""}
-                        onChange={(e) => {
-                          const { value } = e.target;
+                    >
+                      {isEditingCell ? (
+                        <input
+                          autoFocus
+                          className="w-full bg-transparent outline-none"
+                          type={
+                            getColumnMeta(cell.column.id)?.type === "number"
+                              ? "number"
+                              : "text"
+                          }
+                          value={editingCell?.draftValue ?? ""}
+                          onChange={(e) => {
+                            const { value } = e.target;
 
-                          setEditingCell((current) => {
-                            if (!current) {
-                              return current;
+                            setEditingCell((current) => {
+                              if (!current) {
+                                return current;
+                              }
+
+                              if (
+                                current.rowId !== row.id ||
+                                current.columnId !== cell.column.id
+                              ) {
+                                return current;
+                              }
+
+                              return {
+                                ...current,
+                                draftValue: value,
+                              };
+                            });
+
+                            setSelectedCell({
+                              rowId: row.id,
+                              columnId: cell.column.id,
+                            });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              skipBlurCommitRef.current = true;
+                              finishEditing("submit");
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              skipBlurCommitRef.current = true;
+                              finishEditing("cancel");
+                            }
+                          }}
+                          onBlur={() => {
+                            if (skipBlurCommitRef.current) {
+                              skipBlurCommitRef.current = false;
+                              return;
                             }
 
-                            if (
-                              current.rowId !== row.id ||
-                              current.columnId !== cell.column.id
-                            ) {
-                              return current;
-                            }
-
-                            return {
-                              ...current,
-                              draftValue: value,
-                            };
-                          });
-
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            skipBlurCommitRef.current = true;
                             finishEditing("submit");
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            skipBlurCommitRef.current = true;
-                            finishEditing("cancel");
-                          }
-                        }}
-                        onBlur={() => {
-                          if (skipBlurCommitRef.current) {
-                            skipBlurCommitRef.current = false;
-                            return;
-                          }
-
-                          finishEditing("submit");
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                   );
                 })}
               </TableRow>

@@ -1,11 +1,10 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   ArrowDownUp,
   CircleQuestionMark,
   EyeOff,
   ListFilter,
+  Menu,
   MoveRight,
   Plus,
   Tally5,
@@ -23,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect, useState } from "react";
+import { Fragment } from "react";
 import {
   Select,
   SelectContent,
@@ -74,90 +73,126 @@ function SortOrderItem({ type }: { type: "text" | "number" }) {
   );
 }
 
-type SortColumn = {
-  id: string;
-  name: string;
-  type: "number" | "text";
-  displayOrderNum: number;
-  sortOrder: "asc" | "desc";
-  sortPriority: number;
-  airtableId: string;
-};
-
 function SortTool({
   tableId,
+  viewId,
   columns,
 }: {
   tableId: string;
+  viewId: string;
   columns: Column[];
 }) {
   const utils = api.useUtils();
 
-  const [sortColumns, setSortColumns] = useState<SortColumn[]>(
-    columns
-      .map((col) =>
-        col.sortOrder || col.sortPriority
-          ? {
-              ...col,
-              sortOrder: col.sortOrder,
-              sortPriority: col.sortPriority,
-            }
-          : null,
-      )
-      .filter((col): col is SortColumn => col !== null),
-  );
+  const { data: sorts } = api.table.getSorts.useQuery({ viewId });
 
-  const updateSorts = api.table.updateSorts.useMutation({
+  const addSort = api.table.addSort.useMutation({
+    onMutate: async ({ settingId, viewId, columnId, columnType }) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.getSorts.cancel({ viewId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.getSorts.getData({ viewId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        utils.table.getSorts.setData({ viewId }, () => [
+          ...prev,
+          {
+            id: settingId,
+            viewId,
+            columnId,
+            columnType,
+            sortOrder: "asc",
+            sortPriority: 2,
+          },
+        ]);
+      }
+
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
     onSuccess: () => {
       void utils.table.get.invalidate({ tableId });
     },
   });
 
-  useEffect(() => {
-    const sorts = sortColumns.map((sortColumn, index) => ({
-      columnId: sortColumn.id,
-      sortOrder: sortColumn.sortOrder,
-      sortPriority: index,
-    }));
+  const removeSort = api.table.removeSort.useMutation({
+    onMutate: async ({ settingId, viewId }) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.getSorts.cancel({ viewId });
 
-    updateSorts.mutate({ sorts, tableId });
-  }, [sortColumns]);
+      // 2) snapshot previous cache
+      const prev = utils.table.getSorts.getData({ viewId });
 
-  function addSort(column: SortColumn) {
-    if (sortColumns.find((sort) => sort.id === column.id)) return;
+      // 3) update cache optimistically
+      if (prev) {
+        utils.table.getSorts.setData({ viewId }, () =>
+          prev.filter((sort) => sort.id !== settingId),
+        );
+      }
 
-    setSortColumns((prev) => [...prev, { ...column, sortOrder: "asc" }]);
-  }
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+    onSuccess: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
 
-  function updateSortOrder(columnId: string, order: "asc" | "desc") {
-    setSortColumns((prev) =>
-      prev.map((sortColumn) =>
-        sortColumn.id === columnId
-          ? { ...sortColumn, sortOrder: order }
-          : sortColumn,
-      ),
-    );
-  }
+  const updateSortOrder = api.table.updateSortOrder.useMutation({
+    onMutate: async (input) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.getSorts.cancel({ viewId });
 
-  function updateColumn(columnId: string, newColumn: Column) {
-    setSortColumns((prev) =>
-      prev.map((sortColumn) =>
-        sortColumn.id === columnId
-          ? { ...sortColumn, column: newColumn }
-          : sortColumn,
-      ),
-    );
-  }
+      // 2) snapshot previous cache
+      const prev = utils.table.getSorts.getData({ viewId });
 
-  function removeSort(columnId: string) {
-    setSortColumns((prev) =>
-      prev.filter((sortColumn) => sortColumn.id !== columnId),
-    );
-  }
+      // 3) update cache optimistically
+      if (prev) {
+        utils.table.getSorts.setData({ viewId }, () =>
+          prev.map((sortSetting) => {
+            if (sortSetting.id === input.settingId)
+              return { ...sortSetting, sortOrder: input.sortOrder };
+            return sortSetting;
+          }),
+        );
+      }
 
-  function isColumnSelected(columnId: string) {
-    return sortColumns.some((sortColumn) => sortColumn.id === columnId);
-  }
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+    onSuccess: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
+
+  const updateSortColumn = api.table.updateSortColumn.useMutation({
+    onMutate: async (input) => {
+      // 1) stop outgoing refetches so we don't overwrite our optimistic change
+      await utils.table.getSorts.cancel({ viewId });
+
+      // 2) snapshot previous cache
+      const prev = utils.table.getSorts.getData({ viewId });
+
+      // 3) update cache optimistically
+      if (prev) {
+        utils.table.getSorts.setData({ viewId }, () =>
+          prev.map((sortSetting) => {
+            if (sortSetting.id === input.settingId)
+              return { ...sortSetting, columnId: input.columnId };
+            return sortSetting;
+          }),
+        );
+      }
+
+      // 4) pass snapshot to error handler for rollback
+      return { prev };
+    },
+    onSuccess: () => {
+      void utils.table.get.invalidate({ tableId });
+    },
+  });
 
   return (
     <Popover>
@@ -188,20 +223,20 @@ function SortTool({
           <hr className="w-full" />
 
           <div className="w-full">
-            {sortColumns.length !== 0 ? (
+            {sorts && sorts.length !== 0 ? (
               <div className="flex flex-col items-start justify-start gap-2">
-                {sortColumns.map((sortColumn, index) => (
+                {sorts.map((sortSetting, index) => (
                   <div
                     key={index}
                     className="flex w-full items-center justify-start gap-3"
                   >
                     <Select
-                      value={sortColumn.id}
+                      value={sortSetting.columnId}
                       onValueChange={(value) =>
-                        updateColumn(
-                          sortColumn.id,
-                          columns.find((col) => col.id === value)!,
-                        )
+                        updateSortColumn.mutate({
+                          settingId: sortSetting.id,
+                          columnId: value,
+                        })
                       }
                     >
                       <SelectTrigger className="w-full">
@@ -221,9 +256,12 @@ function SortTool({
                     </Select>
 
                     <Select
-                      value={sortColumn.sortOrder}
+                      value={sortSetting.sortOrder}
                       onValueChange={(value) =>
-                        updateSortOrder(sortColumn.id, value as "asc" | "desc")
+                        updateSortOrder.mutate({
+                          settingId: sortSetting.id,
+                          sortOrder: value as "asc" | "desc",
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -231,14 +269,19 @@ function SortTool({
                       </SelectTrigger>
 
                       <SelectContent>
-                        <SortOrderItem type={sortColumn.type} />
+                        <SortOrderItem type={sortSetting.columnType} />
                       </SelectContent>
                     </Select>
 
                     <X
                       size={25}
                       className="ml-2 cursor-pointer"
-                      onClick={() => removeSort(sortColumn.id)}
+                      onClick={() =>
+                        removeSort.mutate({
+                          settingId: sortSetting.id,
+                          viewId: sortSetting.viewId,
+                        })
+                      }
                     />
                   </div>
                 ))}
@@ -257,50 +300,48 @@ function SortTool({
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent>
-                    {columns.map((column, index) => (
-                      <>
-                        {!isColumnSelected(column.id) && (
-                          <DropdownMenuItem
-                            key={index}
-                            onClick={() =>
-                              addSort({
-                                ...column,
-                                sortOrder: "asc",
-                                sortPriority: index,
-                              })
-                            }
-                          >
-                            {column.name}
-                          </DropdownMenuItem>
-                        )}
-                      </>
+                    {columns.map(({ id: columnId, name, type }, index) => (
+                      <DropdownMenuItem
+                        key={index}
+                        onClick={() =>
+                          addSort.mutate({
+                            settingId: crypto.randomUUID(),
+                            viewId,
+                            columnId,
+                            columnType: type,
+                          })
+                        }
+                      >
+                        {name}
+                      </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ) : (
               <>
-                {columns.map((column, index) => (
-                  <>
+                {columns.map(({ id: columnId, name, type }, index) => (
+                  <Fragment key={index}>
                     <PopoverListItem
                       key={index}
-                      text={column.name}
+                      text={name}
                       icon={
-                        column.type === "text" ? (
+                        type === "text" ? (
                           <TextInitial size={15} />
                         ) : (
                           <Tally5 size={15} />
                         )
                       }
                       onClick={() =>
-                        addSort({
-                          ...column,
-                          sortOrder: "asc",
-                          sortPriority: index,
+                        addSort.mutate({
+                          settingId: crypto.randomUUID(),
+                          viewId,
+                          columnId,
+                          columnType: type,
                         })
                       }
                     />
-                  </>
+                  </Fragment>
                 ))}
               </>
             )}
@@ -313,28 +354,40 @@ function SortTool({
 
 export default function TableFnRow({
   tableId,
+  viewId,
   columns,
+  toggleViewsBar,
 }: {
   tableId: string;
+  viewId: string;
   columns: Column[];
+  toggleViewsBar: () => void;
 }) {
   return (
-    <div className="flex w-full items-center justify-end gap-1 border-t border-b border-neutral-300 p-1">
-      <Button variant="ghost">
-        <div className="flex items-center justify-center gap-2">
-          <EyeOff size={20} />
-          <p>Hide fields</p>
-        </div>
-      </Button>
+    <div className="flex w-full items-center justify-between gap-1 border-t border-b border-neutral-300 p-1">
+      <Menu
+        className="ml-3 cursor-pointer"
+        size={20}
+        onClick={toggleViewsBar}
+      />
 
-      <Button variant="ghost">
-        <div className="flex items-center justify-center gap-2">
-          <ListFilter size={20} />
-          <p>Filter</p>
-        </div>
-      </Button>
+      <div className="flex items-center justify-between gap-1">
+        <Button variant="ghost">
+          <div className="flex items-center justify-center gap-2">
+            <EyeOff size={20} />
+            <p>Hide fields</p>
+          </div>
+        </Button>
 
-      <SortTool tableId={tableId} columns={columns} />
+        <Button variant="ghost">
+          <div className="flex items-center justify-center gap-2">
+            <ListFilter size={20} />
+            <p>Filter</p>
+          </div>
+        </Button>
+
+        <SortTool tableId={tableId} columns={columns} viewId={viewId} />
+      </div>
     </div>
   );
 }

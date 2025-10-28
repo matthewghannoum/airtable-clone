@@ -1,16 +1,23 @@
-import Airtable from "@/app/_components/Airtable";
+import { db } from "@/server/db";
+import { airtables, airtableViews } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
 export default async function Page(
   props: PageProps<"/bases/[baseId]/[tableId]">,
 ) {
   const { baseId, tableId } = await props.params;
 
-  // Uncomment below to add a 5 second delay to test loading ui
-  // await new Promise((resolve) => setTimeout(resolve, 5000));
+  const [atView] = await db
+    .select({ defaultViewId: airtableViews.id })
+    .from(airtableViews)
+    .where(eq(airtableViews.airtableId, tableId));
 
-  return (
-    <div className="w-full">
-      <Airtable tableId={tableId} />
-    </div>
-  );
+  if (!atView) {
+    redirect("/bases");
+  }
+
+  const { defaultViewId } = atView;
+
+  redirect(`/bases/${baseId}/${tableId}/${defaultViewId}`);
 }
