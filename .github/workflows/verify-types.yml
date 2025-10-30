@@ -20,10 +20,31 @@ jobs:
       SKIP_ENV_VALIDATION: 1 # for T3 stack or similar env validation
 
     steps:
+      # ---- Gate: internal PRs only ----
+      - name: Determine PR origin
+        id: gate
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            echo "internal=true" >> "$GITHUB_OUTPUT"
+            echo "This is an internal PR. CI will run."
+          else
+            echo "internal=false" >> "$GITHUB_OUTPUT"
+            echo "This is an external PR from a fork. CI steps will be skipped."
+          fi
+
+      - name: External PR notice (no-op)
+        if: steps.gate.outputs.internal == 'false'
+        run: |
+          echo "Skipping type-check for forks to avoid untrusted CI. \
+          Maintainers can test by pushing a branch to the main repo."
+
+      # ---- Real CI (runs only for internal PRs) ----
       - name: Checkout
+        if: steps.gate.outputs.internal == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js 20 LTS and enable Corepack
+        if: steps.gate.outputs.internal == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -33,12 +54,15 @@ jobs:
             **/pnpm-lock.yaml
 
       - name: Enable Corepack (required for pnpm)
+        if: steps.gate.outputs.internal == 'true'
         run: corepack enable
 
       - name: Install dependencies
+        if: steps.gate.outputs.internal == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Restore Next.js build cache
+        if: steps.gate.outputs.internal == 'true'
         uses: actions/cache@v4
         with:
           path: .next/cache
@@ -47,11 +71,12 @@ jobs:
             next-cache-${{ runner.os }}-
 
       - name: Build (runs TypeScript type-check)
+        if: steps.gate.outputs.internal == 'true'
         run: pnpm run build
         # If you want to skip linting inside build:
         # run: pnpm next build --no-lint
 
       - name: Ensure tsconfig.json exists
-        if: ${{ always() }}
+        if: ${{ always() && steps.gate.outputs.internal == 'true' }}
         run: |
           test -f tsconfig.json || (echo "tsconfig.json missing." && exit 1)
