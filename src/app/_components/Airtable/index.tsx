@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
-import TableFnRow from "../TableFnRow";
+import TableFnRow from "./TableFnRow";
 import ATViewsBar from "./ATViewsBar";
 
 export default function Airtable({
@@ -288,6 +288,12 @@ export default function Airtable({
                   const isEditingCell =
                     editingCell?.rowId === row.id &&
                     editingCell?.columnId === cell.column.id;
+
+                  if (
+                    tableData?.columns.find((col) => col.id === cell.column.id)
+                      ?.isHidden
+                  )
+                    return <></>;
 
                   return (
                     <TableCell
