@@ -14,6 +14,7 @@ import {
   updateSortPriority,
 } from "./mutations/sorts/updateSort";
 import removeSort from "./mutations/sorts/removeSort";
+import updateIsHiddenColumn from "./mutations/display/hideColumn";
 
 export const tableRouter = createTRPCRouter({
   get: getTableByView,
@@ -29,4 +30,5 @@ export const tableRouter = createTRPCRouter({
   updateSortPriority,
   updateSortColumn,
   removeSort,
+  updateIsHiddenColumn,
 });
