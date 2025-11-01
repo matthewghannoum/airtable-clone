@@ -2,9 +2,6 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowDownUp,
   CircleQuestionMark,
-  EyeOff,
-  ListFilter,
-  Menu,
   MoveRight,
   Plus,
   Tally5,
@@ -16,7 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import PopoverListItem from "./common/PopoverListItem";
+import PopoverListItem from "../../common/PopoverListItem";
 import {
   Tooltip,
   TooltipContent,
@@ -37,16 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/trpc/react";
-
-type Column = {
-  id: string;
-  name: string;
-  type: "number" | "text";
-  displayOrderNum: number;
-  sortOrder: "asc" | "desc" | null;
-  sortPriority: number | null;
-  airtableId: string;
-};
+import type { Column } from "../../types";
 
 function SortOrderItem({ type }: { type: "text" | "number" }) {
   const lowChar = type === "text" ? "A" : "1";
@@ -73,7 +61,7 @@ function SortOrderItem({ type }: { type: "text" | "number" }) {
   );
 }
 
-function SortTool({
+export default function SortTool({
   tableId,
   viewId,
   columns,
@@ -349,45 +337,5 @@ function SortTool({
         </div>
       </PopoverContent>
     </Popover>
-  );
-}
-
-export default function TableFnRow({
-  tableId,
-  viewId,
-  columns,
-  toggleViewsBar,
-}: {
-  tableId: string;
-  viewId: string;
-  columns: Column[];
-  toggleViewsBar: () => void;
-}) {
-  return (
-    <div className="flex w-full items-center justify-between gap-1 border-t border-b border-neutral-300 p-1">
-      <Menu
-        className="ml-3 cursor-pointer"
-        size={20}
-        onClick={toggleViewsBar}
-      />
-
-      <div className="flex items-center justify-between gap-1">
-        <Button variant="ghost">
-          <div className="flex items-center justify-center gap-2">
-            <EyeOff size={20} />
-            <p>Hide fields</p>
-          </div>
-        </Button>
-
-        <Button variant="ghost">
-          <div className="flex items-center justify-center gap-2">
-            <ListFilter size={20} />
-            <p>Filter</p>
-          </div>
-        </Button>
-
-        <SortTool tableId={tableId} columns={columns} viewId={viewId} />
-      </div>
-    </div>
   );
 }

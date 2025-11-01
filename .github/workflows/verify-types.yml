@@ -43,22 +43,20 @@ jobs:
         if: steps.gate.outputs.internal == 'true'
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20 LTS and enable Corepack
-        if: steps.gate.outputs.internal == 'true'
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            **/pnpm-lock.yaml
+          node-version: "20" # keep this simple; avoid matrix or files for now
 
-      - name: Enable Corepack (required for pnpm)
-        if: steps.gate.outputs.internal == 'true'
-        run: corepack enable
+      # Use Corepack to provide pnpm reliably
+      - name: Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+          node -v
+          pnpm -v
 
       - name: Install dependencies
-        if: steps.gate.outputs.internal == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Restore Next.js build cache
