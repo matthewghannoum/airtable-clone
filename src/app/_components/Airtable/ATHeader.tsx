@@ -20,21 +20,28 @@ export default function ATHeader({
           </TableHead>
 
           {hg.headers.map((header) => (
-            <TableHead key={header.id} className="border-r border-neutral-300">
-              <div className="flex items-center justify-start gap-2">
-                {columns.find((col) => col.id === header.id)?.type ===
-                "text" ? (
-                  <TextInitial size={15} />
-                ) : columns.find((col) => col.id === header.id)?.type ===
-                  "number" ? (
-                  <Tally5 size={15} />
-                ) : null}
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext(),
-                )}
-              </div>
-            </TableHead>
+            <>
+              {!columns.find((col) => col.id === header.id)?.isHidden && (
+                <TableHead
+                  key={header.id}
+                  className="border-r border-neutral-300"
+                >
+                  <div className="flex items-center justify-start gap-2">
+                    {columns.find((col) => col.id === header.id)?.type ===
+                    "text" ? (
+                      <TextInitial size={15} />
+                    ) : columns.find((col) => col.id === header.id)?.type ===
+                      "number" ? (
+                      <Tally5 size={15} />
+                    ) : null}
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </div>
+                </TableHead>
+              )}
+            </>
           ))}
         </TableRow>
       ))}
