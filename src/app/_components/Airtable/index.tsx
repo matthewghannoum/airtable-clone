@@ -298,7 +298,7 @@ export default function Airtable({
                   return (
                     <TableCell
                       key={cell.id}
-                      className={`border-r border-neutral-300 ${
+                      className={`max-w-2xs overflow-x-auto border-r border-neutral-300 ${
                         isEditingCell
                           ? "border-2 border-blue-500 bg-white"
                           : selectedCell?.rowId === row.id &&
