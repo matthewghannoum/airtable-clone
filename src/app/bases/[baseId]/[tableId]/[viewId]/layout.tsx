@@ -108,12 +108,12 @@ export default async function BaseLayout(
         </div>
       </aside>
 
-      <div className="flex h-full flex-1 flex-col">
+      <div className="flex h-full flex-1 flex-col items-center">
         <div className="flex h-12 w-full items-center border-b-1 border-neutral-200 bg-white px-4 text-sm font-medium shadow-sm">
           <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
-        <div className="flex h-full flex-1 flex-col overflow-hidden p-4">
+        <div className="flex h-full w-[98vw] flex-1 flex-col overflow-hidden p-4">
           <div className="flex h-full w-full flex-col overflow-hidden rounded-md bg-white shadow">
             <TableTabs
               baseId={baseId}
