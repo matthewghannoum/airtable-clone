@@ -38,7 +38,10 @@ const addRandomRows = protectedProcedure
 
       for (const { id, name, type } of columns) {
         if (type === "number") {
-          randomRow[id] = faker.number.int({ min: -1000, max: 1000 });
+          randomRow[id] = faker.number.int({
+            min: name.toLowerCase().includes("number") ? 1 : -1000,
+            max: 1000,
+          });
           continue;
         }
 
