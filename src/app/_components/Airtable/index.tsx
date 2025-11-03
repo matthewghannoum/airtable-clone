@@ -7,6 +7,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useRef, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
@@ -258,6 +259,24 @@ export default function Airtable({
     },
   });
 
+  const tableContainerRef = useRef<HTMLTableElement>(null);
+
+  const { rows } = table.getRowModel();
+
+  // TODO: move tablebody and this virualizer to a lower order component to avoid rerendering the virtualizer
+  // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
+  const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
+    count: rows.length,
+    estimateSize: () => 37, //estimate row height for accurate scrollbar dragging
+    getScrollElement: () => tableContainerRef.current,
+    //measure dynamic row height, except in firefox because it measures table border height incorrectly
+    measureElement:
+      typeof window !== "undefined" && navigator.userAgent.includes("Firefox")
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 5,
+  });
+
   return (
     <div className="h-full w-full">
       {tableData?.columns && (
@@ -272,135 +291,153 @@ export default function Airtable({
       <div className="flex h-full w-full items-start justify-start">
         {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
 
-        <Table className="w-full border-collapse bg-white">
+        <Table
+          className="h-full w-full border-collapse bg-white"
+          ref={tableContainerRef}
+        >
           {tableData?.columns && (
             <ATHeader table={table} columns={tableData.columns} />
           )}
 
-          <TableBody className="border-b border-neutral-300">
-            {table.getRowModel().rows.map((row, rowIndex) => (
-              <TableRow key={row.id}>
-                <TableCell>
-                  <p className="ml-1">{rowIndex + 1}</p>
-                </TableCell>
+          <TableBody
+            className="border-b border-neutral-300"
+            style={{
+              // display: "grid",
+              height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
+              position: "relative", //needed for absolute positioning of rows
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const rowIndex = virtualRow.index;
+              const row = rows[rowIndex];
 
-                {row.getVisibleCells().map((cell) => {
-                  const isEditingCell =
-                    editingCell?.rowId === row.id &&
-                    editingCell?.columnId === cell.column.id;
+              if (!row) return <></>;
 
-                  if (
-                    tableData?.columns.find((col) => col.id === cell.column.id)
-                      ?.isHidden
-                  )
-                    return <></>;
+              return (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <p className="ml-1">{rowIndex + 1}</p>
+                  </TableCell>
 
-                  return (
-                    <TableCell
-                      key={cell.id}
-                      className={`max-w-2xs overflow-x-auto border-r border-neutral-300 ${
-                        isEditingCell
-                          ? "border-2 border-blue-500 bg-white"
-                          : selectedCell?.rowId === row.id &&
-                              selectedCell?.columnId === cell.column.id
-                            ? "border-2 border-blue-400 bg-white"
-                            : ""
-                      }`}
-                      onClick={() => {
-                        if (
-                          selectedCell?.rowId === row.id &&
-                          selectedCell?.columnId === cell.column.id
-                        ) {
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                          startEditing(
-                            row.id,
-                            cell.column.id,
-                            cell.getValue() as string | number | null,
-                          );
-                        } else {
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                          setEditingCell(null);
-                        }
-                      }}
-                    >
-                      {isEditingCell ? (
-                        <input
-                          autoFocus
-                          className="w-full bg-transparent outline-none"
-                          type={
-                            getColumnMeta(cell.column.id)?.type === "number"
-                              ? "number"
-                              : "text"
-                          }
-                          value={editingCell?.draftValue ?? ""}
-                          onChange={(e) => {
-                            const { value } = e.target;
+                  {row.getVisibleCells().map((cell) => {
+                    const isEditingCell =
+                      editingCell?.rowId === row.id &&
+                      editingCell?.columnId === cell.column.id;
 
-                            setEditingCell((current) => {
-                              if (!current) {
-                                return current;
-                              }
+                    if (
+                      tableData?.columns.find(
+                        (col) => col.id === cell.column.id,
+                      )?.isHidden
+                    )
+                      return <></>;
 
-                              if (
-                                current.rowId !== row.id ||
-                                current.columnId !== cell.column.id
-                              ) {
-                                return current;
-                              }
-
-                              return {
-                                ...current,
-                                draftValue: value,
-                              };
-                            });
-
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={`max-w-2xs overflow-x-auto border-r border-neutral-300 ${
+                          isEditingCell
+                            ? "border-2 border-blue-500 bg-white"
+                            : selectedCell?.rowId === row.id &&
+                                selectedCell?.columnId === cell.column.id
+                              ? "border-2 border-blue-400 bg-white"
+                              : ""
+                        }`}
+                        onClick={() => {
+                          if (
+                            selectedCell?.rowId === row.id &&
+                            selectedCell?.columnId === cell.column.id
+                          ) {
                             setSelectedCell({
                               rowId: row.id,
                               columnId: cell.column.id,
                             });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              skipBlurCommitRef.current = true;
-                              finishEditing("submit");
+                            startEditing(
+                              row.id,
+                              cell.column.id,
+                              cell.getValue() as string | number | null,
+                            );
+                          } else {
+                            setSelectedCell({
+                              rowId: row.id,
+                              columnId: cell.column.id,
+                            });
+                            setEditingCell(null);
+                          }
+                        }}
+                      >
+                        {isEditingCell ? (
+                          <input
+                            autoFocus
+                            className="w-full bg-transparent outline-none"
+                            type={
+                              getColumnMeta(cell.column.id)?.type === "number"
+                                ? "number"
+                                : "text"
                             }
-                            if (e.key === "Escape") {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              skipBlurCommitRef.current = true;
-                              finishEditing("cancel");
-                            }
-                          }}
-                          onBlur={() => {
-                            if (skipBlurCommitRef.current) {
-                              skipBlurCommitRef.current = false;
-                              return;
-                            }
+                            value={editingCell?.draftValue ?? ""}
+                            onChange={(e) => {
+                              const { value } = e.target;
 
-                            finishEditing("submit");
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
+                              setEditingCell((current) => {
+                                if (!current) {
+                                  return current;
+                                }
+
+                                if (
+                                  current.rowId !== row.id ||
+                                  current.columnId !== cell.column.id
+                                ) {
+                                  return current;
+                                }
+
+                                return {
+                                  ...current,
+                                  draftValue: value,
+                                };
+                              });
+
+                              setSelectedCell({
+                                rowId: row.id,
+                                columnId: cell.column.id,
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                skipBlurCommitRef.current = true;
+                                finishEditing("submit");
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                skipBlurCommitRef.current = true;
+                                finishEditing("cancel");
+                              }
+                            }}
+                            onBlur={() => {
+                              if (skipBlurCommitRef.current) {
+                                skipBlurCommitRef.current = false;
+                                return;
+                              }
+
+                              finishEditing("submit");
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
 
             {tableData?.columns && (
               <ATAddRow
