@@ -31,9 +31,11 @@ const addRandomRows = protectedProcedure
       name.toLowerCase().includes("email"),
     );
 
-    const randomRows: Record<string, string | number>[] = [];
+    const randomRowsBatches: Record<string, string | number>[][] = [[]];
 
     for (let i = 1; i <= numRows; i++) {
+      if (i % 10000 === 0) randomRowsBatches.push([]);
+
       const randomRow: Record<string, string | number> = {};
 
       for (const { id, name, type } of columns) {
@@ -56,15 +58,17 @@ const addRandomRows = protectedProcedure
         }
       }
 
-      randomRows.push(randomRow);
+      randomRowsBatches[randomRowsBatches.length - 1]?.push(randomRow);
     }
 
-    await ctx.db.insert(airtableRows).values(
-      randomRows.map((randomRow) => ({
-        values: randomRow,
-        airtableId: tableId,
-      })),
-    );
+    for (const randomRows of randomRowsBatches) {
+      await ctx.db.insert(airtableRows).values(
+        randomRows.map((randomRow) => ({
+          values: randomRow,
+          airtableId: tableId,
+        })),
+      );
+    }
 
     const endTime = Date.now();
 
