@@ -3,6 +3,7 @@ import { EyeOff, ListFilter, Menu } from "lucide-react";
 import type { Column } from "../../types";
 import SortTool from "./SortTool";
 import HideTool from "./HideTool";
+import AddRandomRowsTool from "./AddRandomRowsTool";
 
 export default function TableFnRow({
   tableId,
@@ -24,6 +25,8 @@ export default function TableFnRow({
       />
 
       <div className="flex items-center justify-between gap-1">
+        <AddRandomRowsTool tableId={tableId} />
+
         <HideTool tableId={tableId} columns={columns} viewId={viewId} />
 
         <Button variant="ghost">
