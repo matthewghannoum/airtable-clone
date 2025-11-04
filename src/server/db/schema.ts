@@ -153,6 +153,7 @@ export const viewDisplaySettings = createTable("view_displays", (d) => ({
 
 export const airtableRows = createTable("at_row", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
+  insertionOrder: d.integer().notNull(),
   values: d.jsonb().$type<Record<string, string | number | null>>().notNull(),
   createdTimestamp: d
     .timestamp({ mode: "date", withTimezone: true })

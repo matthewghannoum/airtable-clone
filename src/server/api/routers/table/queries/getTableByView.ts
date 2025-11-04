@@ -84,7 +84,7 @@ const getTableByView = protectedProcedure
       .select({ values: airtableRows.values, id: airtableRows.id })
       .from(airtableRows)
       .where(eq(airtableRows.airtableId, input.tableId))
-      .orderBy(...orderBy); // airtableRows.createdTimestamp
+      .orderBy(...orderBy, airtableRows.insertionOrder); // airtableRows.createdTimestamp
 
     return {
       columns,

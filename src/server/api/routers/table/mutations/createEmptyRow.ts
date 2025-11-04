@@ -1,6 +1,6 @@
 import { protectedProcedure } from "@/server/api/trpc";
 import { airtableColumns, airtableRows } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import z from "zod";
 
 const createEmptyRow = protectedProcedure
@@ -21,10 +21,18 @@ const createEmptyRow = protectedProcedure
       values[column.id] = null;
     }
 
+    const [row] = await ctx.db
+      .select({
+        maxOrder: max(airtableRows.insertionOrder),
+      })
+      .from(airtableRows)
+      .where(eq(airtableRows.airtableId, input.tableId));
+
     const [newRow] = await ctx.db
       .insert(airtableRows)
       .values({
         id: input.rowId,
+        insertionOrder: (row?.maxOrder ?? 0) + 1,
         airtableId: input.tableId,
         values,
       })
