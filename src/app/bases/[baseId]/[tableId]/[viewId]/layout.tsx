@@ -113,7 +113,7 @@ export default async function BaseLayout(
           <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
-        <div className="w-[calc(100vw - 16px)] h-full bg-white">
+        <div className="h-full w-full bg-white">
           <TableTabs
             baseId={baseId}
             currentTableId={tableId}
