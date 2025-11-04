@@ -5,11 +5,18 @@ import {
   viewDisplaySettings,
   viewSorts,
 } from "@/server/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import z from "zod";
 
 const getTableByView = protectedProcedure
-  .input(z.object({ tableId: z.string(), viewId: z.string() }))
+  .input(
+    z.object({
+      tableId: z.string(),
+      viewId: z.string(),
+      limit: z.number().min(1).max(100),
+      cursor: z.number().nullish(),
+    }),
+  )
   .query(async ({ ctx, input }) => {
     const viewSettings = await ctx.db
       .select()
@@ -80,16 +87,30 @@ const getTableByView = protectedProcedure
       .sort((a, b) => a.sortPriority - b.sortPriority)
       .map((c) => c.orderByComponent);
 
+    const cursor = input.cursor ?? 0;
+
     const rows = await ctx.db
       .select({ values: airtableRows.values, id: airtableRows.id })
       .from(airtableRows)
       .where(eq(airtableRows.airtableId, input.tableId))
-      .orderBy(...orderBy, airtableRows.insertionOrder); // airtableRows.createdTimestamp
+      .orderBy(...orderBy, airtableRows.insertionOrder)
+      .offset(cursor)
+      .limit(input.limit); // airtableRows.createdTimestamp
+
+    const [numRows] = await ctx.db
+      .select({ count: count(airtableRows) })
+      .from(airtableRows)
+      .where(eq(airtableRows.airtableId, input.tableId));
 
     return {
       columns,
       rows: rows.map((row) => row.values),
       rowIds: rows.map((row) => row.id),
+      nextCursor:
+        cursor + input.limit >= (numRows?.count ?? 0)
+          ? null
+          : cursor + input.limit + 1,
+      numRows: numRows?.count ?? 0,
     };
   });
 
