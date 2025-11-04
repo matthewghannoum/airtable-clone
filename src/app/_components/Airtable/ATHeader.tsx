@@ -3,6 +3,7 @@ import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tally5, TextInitial } from "lucide-react";
 import type { Column } from "../types";
+import { Fragment } from "react";
 
 export default function ATHeader({
   table,
@@ -19,8 +20,8 @@ export default function ATHeader({
             <Checkbox />
           </TableHead>
 
-          {hg.headers.map((header) => (
-            <>
+          {hg.headers.map((header, index) => (
+            <Fragment key={index}>
               {!columns.find((col) => col.id === header.id)?.isHidden && (
                 <TableHead
                   key={header.id}
@@ -41,7 +42,7 @@ export default function ATHeader({
                   </div>
                 </TableHead>
               )}
-            </>
+            </Fragment>
           ))}
         </TableRow>
       ))}
