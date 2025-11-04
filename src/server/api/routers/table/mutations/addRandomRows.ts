@@ -3,6 +3,7 @@ import { airtableColumns, airtableRows } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import z from "zod";
 import { faker } from "@faker-js/faker";
+import getMaxInsertionOrder from "../utils/getMaxInsertOrder";
 
 const addRandomRows = protectedProcedure
   .input(
@@ -61,11 +62,14 @@ const addRandomRows = protectedProcedure
       randomRowsBatches[randomRowsBatches.length - 1]?.push(randomRow);
     }
 
+    const maxInsertionOrder = await getMaxInsertionOrder(ctx.db, tableId);
+
     for (const randomRows of randomRowsBatches) {
       await ctx.db.insert(airtableRows).values(
-        randomRows.map((randomRow) => ({
+        randomRows.map((randomRow, index) => ({
           values: randomRow,
           airtableId: tableId,
+          insertionOrder: maxInsertionOrder + index + 1,
         })),
       );
     }
