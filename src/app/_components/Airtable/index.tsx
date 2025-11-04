@@ -8,7 +8,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
@@ -26,10 +26,31 @@ export default function Airtable({
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data: tableData, refetch } = api.table.get.useQuery({
-    tableId,
-    viewId,
-  });
+  const { data, fetchNextPage, isFetching, isLoading } =
+    api.table.get.useInfiniteQuery(
+      {
+        tableId,
+        viewId,
+        limit: 100,
+      },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    );
+
+  const tableData = useMemo(() => {
+    const columns = data?.pages[0]?.columns ?? [];
+    const rows =
+      data?.pages
+        .map(({ rows }) => rows)
+        ?.reduce((accRows, currentRows) => [...accRows, ...currentRows]) ?? [];
+    const rowIds =
+      data?.pages
+        .map(({ rowIds }) => rowIds)
+        ?.reduce((accRowIds, currentRowIds) => [
+          ...accRowIds,
+          ...currentRowIds,
+        ]) ?? [];
+    return { columns, rows, rowIds };
+  }, [data]);
 
   const rowValues = tableData ? tableData.rows : [];
   const rowIds = tableData ? tableData.rowIds : [];
@@ -259,7 +280,34 @@ export default function Airtable({
     },
   });
 
+  const totalFetched = tableData.rows.length;
+  const totalDBRowCount = data?.pages[0]?.numRows ?? 0;
+
   const tableContainerRef = useRef<HTMLTableElement>(null);
+
+  // called on scroll and possibly on mount to fetch more data as the user scrolls and reaches bottom of table
+  const fetchMoreOnBottomReached = useCallback(
+    (containerRefElement?: HTMLDivElement | null) => {
+      if (containerRefElement) {
+        const { scrollHeight, scrollTop, clientHeight } = containerRefElement;
+        // once the user has scrolled within 500px of the bottom of the table, fetch more data if we can
+        if (
+          scrollHeight - scrollTop - clientHeight < 500 &&
+          !isFetching &&
+          totalFetched < totalDBRowCount
+        ) {
+          void fetchNextPage();
+        }
+      }
+    },
+    [fetchNextPage, isFetching, totalFetched, totalDBRowCount],
+  );
+
+  // a check on mount and after a fetch to see if the table is already scrolled to the bottom and immediately needs to fetch more data
+  useEffect(() => {
+    console.log("remounting fetchMoreOnBottomReached");
+    fetchMoreOnBottomReached(tableContainerRef.current);
+  }, [fetchMoreOnBottomReached]);
 
   const { rows } = table.getRowModel();
 
@@ -289,23 +337,24 @@ export default function Airtable({
       )}
 
       {/* TanStack virtualizer requires a fixed height for the table container (calculated as the screen - total height divs on top of the container) */}
-      <div className="flex h-[calc(100vh-134px)] w-full items-start justify-start overflow-y-auto">
+      <div
+        data-slot="table-container"
+        className="relative flex h-[calc(100vh-134px)] w-full items-start justify-start overflow-auto"
+        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
+        ref={tableContainerRef}
+      >
         {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
 
-        <Table
-          className="h-full w-full border-collapse bg-white"
-          ref={tableContainerRef}
-        >
+        <Table className="h-full w-full border-collapse bg-white">
           {tableData?.columns && (
             <ATHeader table={table} columns={tableData.columns} />
           )}
 
           <TableBody
-            className="border-b border-neutral-300"
+            className="relative border-b border-neutral-300"
             style={{
               // display: "grid",
               height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
-              position: "relative", //needed for absolute positioning of rows
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -315,8 +364,14 @@ export default function Airtable({
               if (!row) return <></>;
 
               return (
-                <TableRow key={row.id}>
-                  <TableCell>
+                <TableRow
+                  key={rowIndex}
+                  style={{
+                    position: "absolute",
+                    transform: `translateY(${virtualRow.start}px)`, // this should always be a `style` as it changes on scroll
+                  }}
+                >
+                  <TableCell className="h-9">
                     <p className="ml-1">{rowIndex + 1}</p>
                   </TableCell>
 
@@ -335,7 +390,7 @@ export default function Airtable({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`max-w-2xs overflow-x-auto border-r border-neutral-300 ${
+                        className={`h-9 w-48 max-w-48 overflow-x-auto border-r border-neutral-300 ${
                           isEditingCell
                             ? "border-2 border-blue-500 bg-white"
                             : selectedCell?.rowId === row.id &&
