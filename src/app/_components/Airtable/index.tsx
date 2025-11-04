@@ -288,7 +288,8 @@ export default function Airtable({
         />
       )}
 
-      <div className="flex h-full w-full items-start justify-start">
+      {/* TanStack virtualizer requires a fixed height for the table container (calculated as the screen - total height divs on top of the container) */}
+      <div className="flex h-[calc(100vh-134px)] w-full items-start justify-start overflow-y-auto">
         {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
 
         <Table
