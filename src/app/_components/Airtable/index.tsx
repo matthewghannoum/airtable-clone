@@ -375,10 +375,7 @@ export default function Airtable({
               const rowIndex = virtualRow.index;
               const row = rows[rowIndex];
 
-              if (
-                rowIndex === rowVirtualizer.getVirtualItems().length - 1 &&
-                tableData?.columns
-              )
+              if (rowIndex === totalFetched - 1 && tableData?.columns)
                 return (
                   <ATAddRow
                     key={rowIndex}
