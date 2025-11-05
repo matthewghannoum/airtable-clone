@@ -15,7 +15,7 @@ import ATAddCol from "./ATAddCol";
 import TableFnRow from "./TableFnRow";
 import ATViewsBar from "./ATViewsBar";
 
-const limit = 100;
+export const limit = 100;
 
 export default function Airtable({
   tableId,
@@ -248,8 +248,6 @@ export default function Airtable({
       // 2) snapshot previous cache
       const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
 
-      console.log("prev", prev);
-
       // 3) update cache optimistically
       if (prev) {
         utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
@@ -324,7 +322,7 @@ export default function Airtable({
   // TODO: move tablebody and this virualizer to a lower order component to avoid rerendering the virtualizer
   // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
   const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
-    count: rows.length,
+    count: rows.length + 1,
     estimateSize: () => 36, // estimate row height for accurate scrollbar dragging
     getScrollElement: () => tableContainerRef.current,
     // measure dynamic row height, except in firefox because it measures table border height incorrectly
@@ -368,7 +366,7 @@ export default function Airtable({
           )}
 
           <TableBody
-            className="relative border-b border-neutral-300"
+            className="relative"
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
             }}
@@ -376,6 +374,23 @@ export default function Airtable({
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const rowIndex = virtualRow.index;
               const row = rows[rowIndex];
+
+              if (rowIndex === rowVirtualizer.getVirtualItems().length - 1)
+                return (
+                  <>
+                    {tableData?.columns && (
+                      <ATAddRow
+                        tableId={tableId}
+                        viewId={viewId}
+                        columns={tableData.columns}
+                        virtualRowStart={virtualRow.start}
+                        // refetch={async () => {
+                        //   await refetch();
+                        // }}
+                      />
+                    )}
+                  </>
+                );
 
               if (!row) return <></>;
 
@@ -516,17 +531,6 @@ export default function Airtable({
                 </TableRow>
               );
             })}
-
-            {/*{tableData?.columns && (
-              <ATAddRow
-                tableId={tableId}
-                viewId={viewId}
-                columns={tableData.columns}
-                refetch={async () => {
-                  await refetch();
-                }}
-              />
-            )}*/}
           </TableBody>
         </Table>
 
