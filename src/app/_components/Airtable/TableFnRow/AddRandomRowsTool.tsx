@@ -12,14 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 
+const permissionErrMsg = "User does not have permission to use this feature.";
+
 export default function AddRandomRowsTool({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
 
   const [numRows, setNumRows] = useState<number | undefined>();
+  const [isPermissionsError, setIsPermissionsError] = useState(false);
 
   const { mutate, isPending } = api.table.addRandomRows.useMutation({
     onSuccess: () => {
+      setIsPermissionsError(false);
       void utils.table.get.invalidate({ tableId });
+    },
+    onError: (error) => {
+      if (error.message === permissionErrMsg) setIsPermissionsError(true);
     },
   });
 
@@ -45,6 +52,10 @@ export default function AddRandomRowsTool({ tableId }: { tableId: string }) {
           placeholder="Number of random rows to add"
           onChange={(e) => setNumRows(Number(e.target.value))}
         />
+
+        {isPermissionsError && (
+          <p className="text-sm font-medium text-red-500">{permissionErrMsg}</p>
+        )}
 
         <div className="flex items-center justify-center gap-2">
           <Button

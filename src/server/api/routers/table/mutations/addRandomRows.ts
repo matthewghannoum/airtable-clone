@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import z from "zod";
 import { faker } from "@faker-js/faker";
 import getMaxInsertionOrder from "../utils/getMaxInsertOrder";
+import { env } from "@/env";
 
 const addRandomRows = protectedProcedure
   .input(
@@ -13,6 +14,17 @@ const addRandomRows = protectedProcedure
     }),
   )
   .mutation(async ({ ctx, input: { tableId, numRows } }) => {
+    const adminUsers = env.ADMIN_USERS.split(", ");
+
+    const userEmail = ctx.session.user.email;
+
+    if (
+      userEmail &&
+      !adminUsers.includes(userEmail) &&
+      env.NODE_ENV !== "development"
+    )
+      throw Error("User does not have permission to use this feature.");
+
     const startTime = Date.now();
 
     const columns = await ctx.db
