@@ -25,7 +25,7 @@ export default function UserAccount({
 
       {isAccountMenuOpen && (
         <div
-          className={`absolute ${popupLocation === "top-right" ? "top-12 right-4" : "bottom-12 left-0"} w-48 rounded-sm border-1 border-neutral-300 bg-white shadow-lg`}
+          className={`absolute z-100 ${popupLocation === "top-right" ? "top-12 right-4" : "bottom-12 left-0"} w-48 rounded-sm border-1 border-neutral-300 bg-white shadow-lg`}
         >
           <p className="px-4 pt-2 text-sm">{name}</p>
           <p className="px-4 pt-1 pb-2 text-xs text-neutral-500">{email}</p>
