@@ -94,7 +94,7 @@ export default async function BaseLayout(
 
   return (
     <div className="flex h-screen bg-neutral-100">
-      <aside className="flex h-full w-16 flex-col items-center justify-between border-r-1 border-neutral-200 bg-white py-6 shadow-sm">
+      <aside className="flex h-full min-w-16 flex-col items-center justify-between border-r-1 border-neutral-200 bg-white py-6 shadow-sm">
         <div className="flex flex-col items-center gap-4">
           <BackLogo />
         </div>
@@ -108,21 +108,19 @@ export default async function BaseLayout(
         </div>
       </aside>
 
-      <div className="flex h-full flex-1 flex-col">
+      <div className="h-dvh w-full overflow-hidden">
         <div className="flex h-12 w-full items-center border-b-1 border-neutral-200 bg-white px-4 text-sm font-medium shadow-sm">
           <BaseTitle baseId={baseId} title={base.name} />
         </div>
 
-        <div className="flex h-full flex-1 flex-col overflow-hidden p-4">
-          <div className="flex h-full w-full flex-col overflow-hidden rounded-md bg-white shadow">
-            <TableTabs
-              baseId={baseId}
-              currentTableId={tableId}
-              currentTables={tables}
-            />
+        <div className="h-full w-full bg-white">
+          <TableTabs
+            baseId={baseId}
+            currentTableId={tableId}
+            currentTables={tables}
+          />
 
-            <div className="flex-1 overflow-auto">{children}</div>
-          </div>
+          {children}
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ import { api } from "@/trpc/react";
 import { Plus, Tally5, TextInitial } from "lucide-react";
 import { useState } from "react";
 import PopoverListItem from "../common/PopoverListItem";
+import { limit } from ".";
 
 export default function ATAddCol({
   tableId,
@@ -33,30 +34,39 @@ export default function ATAddCol({
   const addCol = api.table.addColumn.useMutation({
     onMutate: async ({ columnId, name, type, tableId }) => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId, viewId });
+      await utils.table.get.cancel({ tableId, viewId, limit });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId, viewId });
+      const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
 
       // 3) update cache optimistically
       if (prev) {
-        const newCol = {
-          id: columnId,
-          name: name,
-          displayOrderNum: prev.columns.length,
-          type: type,
-          airtableId: tableId,
-          sortOrder: null,
-          sortPriority: null,
-          isHidden: false,
-        };
+        utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
+          if (!old) return { pages: [], pageParams: [] };
 
-        utils.table.get.setData({ tableId, viewId }, () => ({
-          columns: [...prev.columns, newCol],
-          rows: prev.rows,
-          rowIds: prev.rowIds,
-        }));
+          const newCol = {
+            id: columnId,
+            name: name,
+            displayOrderNum: old.pages[0]?.columns.length ?? 0,
+            type: type,
+            airtableId: tableId,
+            sortOrder: null,
+            sortPriority: null,
+            isHidden: false,
+          };
+
+          return {
+            ...old,
+            pages:
+              old?.pages.map((page) => ({
+                ...page,
+                columns: [...page.columns, newCol],
+              })) ?? [],
+          };
+        });
       }
+
+      return { prev };
     },
 
     onSuccess: () => {

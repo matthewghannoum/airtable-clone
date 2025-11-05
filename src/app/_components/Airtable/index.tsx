@@ -7,12 +7,22 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { useEffect, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
 import TableFnRow from "./TableFnRow";
 import ATViewsBar from "./ATViewsBar";
+
+export const limit = 100;
 
 export default function Airtable({
   tableId,
@@ -25,10 +35,30 @@ export default function Airtable({
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data: tableData, refetch } = api.table.get.useQuery({
-    tableId,
-    viewId,
-  });
+  const { data, fetchNextPage, isFetching } = api.table.get.useInfiniteQuery(
+    {
+      tableId,
+      viewId,
+      limit,
+    },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  );
+
+  const tableData = useMemo(() => {
+    const columns = data?.pages[0]?.columns ?? [];
+    const rows =
+      data?.pages
+        .map(({ rows }) => rows)
+        ?.reduce((accRows, currentRows) => [...accRows, ...currentRows]) ?? [];
+    const rowIds =
+      data?.pages
+        .map(({ rowIds }) => rowIds)
+        ?.reduce((accRowIds, currentRowIds) => [
+          ...accRowIds,
+          ...currentRowIds,
+        ]) ?? [];
+    return { columns, rows, rowIds };
+  }, [data]);
 
   const rowValues = tableData ? tableData.rows : [];
   const rowIds = tableData ? tableData.rowIds : [];
@@ -220,28 +250,33 @@ export default function Airtable({
       const { rowId, columnId, cellValue } = input;
 
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId, viewId });
+      await utils.table.get.cancel({ tableId, viewId, limit });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId, viewId });
+      const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
 
       // 3) update cache optimistically
       if (prev) {
-        const newRows = prev.rows.map((row, index) => {
-          if (rowId === rowIds[index]) {
-            return {
-              ...row,
-              [columnId]: cellValue,
-            };
-          }
-          return row;
-        });
+        utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
+          if (!old) return { pages: [], pageParams: [] };
 
-        utils.table.get.setData({ tableId, viewId }, () => ({
-          columns: prev.columns,
-          rows: newRows,
-          rowIds: prev.rowIds,
-        }));
+          return {
+            ...old,
+            pages:
+              old?.pages.map((page) => ({
+                ...page,
+                rows: page.rows.map((row, index) => {
+                  if (rowId === rowIds[index]) {
+                    return {
+                      ...row,
+                      [columnId]: cellValue,
+                    };
+                  }
+                  return row;
+                }),
+              })) ?? [],
+          };
+        });
       }
 
       // 4) pass snapshot to error handler for rollback
@@ -249,7 +284,10 @@ export default function Airtable({
     },
     onError: (err, newTodo, context) => {
       if (context?.prev) {
-        utils.table.get.setData({ tableId, viewId }, context.prev);
+        utils.table.get.setInfiniteData(
+          { tableId, viewId, limit },
+          context.prev,
+        );
       }
     },
     // Always refetch after error or success:
@@ -257,6 +295,53 @@ export default function Airtable({
       void utils.table.get.invalidate({ tableId, viewId });
     },
   });
+
+  const totalFetched = tableData.rows.length;
+  const totalDBRowCount = data?.pages[0]?.numRows ?? 0;
+
+  const tableContainerRef = useRef<HTMLTableElement>(null);
+
+  // called on scroll and possibly on mount to fetch more data as the user scrolls and reaches bottom of table
+  const fetchMoreOnBottomReached = useCallback(
+    (containerRefElement?: HTMLDivElement | null) => {
+      if (containerRefElement) {
+        const { scrollHeight, scrollTop, clientHeight } = containerRefElement;
+        // once the user has scrolled within 500px of the bottom of the table, fetch more data if we can
+        if (
+          scrollHeight - scrollTop - clientHeight < 500 &&
+          !isFetching &&
+          totalFetched < totalDBRowCount
+        ) {
+          void fetchNextPage();
+        }
+      }
+    },
+    [fetchNextPage, isFetching, totalFetched, totalDBRowCount],
+  );
+
+  // a check on mount and after a fetch to see if the table is already scrolled to the bottom and immediately needs to fetch more data
+  useEffect(() => {
+    fetchMoreOnBottomReached(tableContainerRef.current);
+  }, [fetchMoreOnBottomReached]);
+
+  const { rows } = table.getRowModel();
+
+  // TODO: move tablebody and this virualizer to a lower order component to avoid rerendering the virtualizer
+  // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
+  const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
+    count: rows.length + 1,
+    estimateSize: () => 36, // estimate row height for accurate scrollbar dragging
+    getScrollElement: () => tableContainerRef.current,
+    // measure dynamic row height, except in firefox because it measures table border height incorrectly
+    measureElement:
+      typeof window !== "undefined" && navigator.userAgent.includes("Firefox")
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 50,
+  });
+
+  // Create % widths once, reuse everywhere
+  const colWidthPercentage = `calc(48px-${100 / tableData.columns.length}%)`;
 
   return (
     <div className="h-full w-full">
@@ -269,149 +354,184 @@ export default function Airtable({
         />
       )}
 
-      <div className="flex h-full w-full items-start justify-start">
+      {/* TanStack virtualizer requires a fixed height for the table container (calculated as the screen - total height divs on top of the container) */}
+      <div
+        data-slot="table-container"
+        className="relative flex h-[calc(100vh-134px)] w-full items-start justify-start overflow-auto"
+        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
+        ref={tableContainerRef}
+      >
         {!isViewsBarHidden && <ATViewsBar tableId={tableId} viewId={viewId} />}
 
-        <Table className="w-full border-collapse bg-white">
+        <Table className="h-full w-full border-collapse bg-white">
           {tableData?.columns && (
-            <ATHeader table={table} columns={tableData.columns} />
+            <ATHeader
+              table={table}
+              columns={tableData.columns}
+              colWidthPercentage={colWidthPercentage}
+            />
           )}
 
-          <TableBody className="border-b border-neutral-300">
-            {table.getRowModel().rows.map((row, rowIndex) => (
-              <TableRow key={row.id}>
-                <TableCell>
-                  <p className="ml-1">{rowIndex + 1}</p>
-                </TableCell>
+          <TableBody
+            className="relative"
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const rowIndex = virtualRow.index;
+              const row = rows[rowIndex];
 
-                {row.getVisibleCells().map((cell) => {
-                  const isEditingCell =
-                    editingCell?.rowId === row.id &&
-                    editingCell?.columnId === cell.column.id;
+              if (rowIndex === totalFetched - 1 && tableData?.columns)
+                return (
+                  <ATAddRow
+                    key={rowIndex}
+                    tableId={tableId}
+                    viewId={viewId}
+                    columns={tableData.columns}
+                    virtualRowStart={virtualRow.start}
+                  />
+                );
 
-                  if (
-                    tableData?.columns.find((col) => col.id === cell.column.id)
-                      ?.isHidden
-                  )
-                    return <></>;
+              if (!row) return <Fragment key={rowIndex}></Fragment>;
 
-                  return (
-                    <TableCell
-                      key={cell.id}
-                      className={`border-r border-neutral-300 ${
-                        isEditingCell
-                          ? "border-2 border-blue-500 bg-white"
-                          : selectedCell?.rowId === row.id &&
-                              selectedCell?.columnId === cell.column.id
-                            ? "border-2 border-blue-400 bg-white"
-                            : ""
-                      }`}
-                      onClick={() => {
-                        if (
-                          selectedCell?.rowId === row.id &&
-                          selectedCell?.columnId === cell.column.id
-                        ) {
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                          startEditing(
-                            row.id,
-                            cell.column.id,
-                            cell.getValue() as string | number | null,
-                          );
-                        } else {
-                          setSelectedCell({
-                            rowId: row.id,
-                            columnId: cell.column.id,
-                          });
-                          setEditingCell(null);
-                        }
-                      }}
-                    >
-                      {isEditingCell ? (
-                        <input
-                          autoFocus
-                          className="w-full bg-transparent outline-none"
-                          type={
-                            getColumnMeta(cell.column.id)?.type === "number"
-                              ? "number"
-                              : "text"
-                          }
-                          value={editingCell?.draftValue ?? ""}
-                          onChange={(e) => {
-                            const { value } = e.target;
+              return (
+                <TableRow
+                  key={rowIndex}
+                  className="flex w-full"
+                  style={{
+                    position: "absolute",
+                    transform: `translateY(${virtualRow.start}px)`, // this should always be a `style` as it changes on scroll
+                  }}
+                >
+                  <TableCell className="h-9 max-w-12 flex-none">
+                    <div className="flex h-full items-center pr-6">
+                      <p className="ml-1">{rowIndex + 1}</p>
+                    </div>
+                  </TableCell>
 
-                            setEditingCell((current) => {
-                              if (!current) {
-                                return current;
-                              }
+                  {row.getVisibleCells().map((cell) => {
+                    const isEditingCell =
+                      editingCell?.rowId === row.id &&
+                      editingCell?.columnId === cell.column.id;
 
-                              if (
-                                current.rowId !== row.id ||
-                                current.columnId !== cell.column.id
-                              ) {
-                                return current;
-                              }
+                    if (
+                      tableData?.columns.find(
+                        (col) => col.id === cell.column.id,
+                      )?.isHidden
+                    )
+                      return <Fragment key={cell.id}></Fragment>;
 
-                              return {
-                                ...current,
-                                draftValue: value,
-                              };
-                            });
-
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={`h-9 w-full flex-1 overflow-x-auto border-r border-neutral-300 ${
+                          isEditingCell
+                            ? "border-2 border-blue-500 bg-white"
+                            : selectedCell?.rowId === row.id &&
+                                selectedCell?.columnId === cell.column.id
+                              ? "border-2 border-blue-400 bg-white"
+                              : ""
+                        }`}
+                        style={{ flex: `0 0 ${colWidthPercentage}` }}
+                        onClick={() => {
+                          if (
+                            selectedCell?.rowId === row.id &&
+                            selectedCell?.columnId === cell.column.id
+                          ) {
                             setSelectedCell({
                               rowId: row.id,
                               columnId: cell.column.id,
                             });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              skipBlurCommitRef.current = true;
-                              finishEditing("submit");
-                            }
-                            if (e.key === "Escape") {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              skipBlurCommitRef.current = true;
-                              finishEditing("cancel");
-                            }
-                          }}
-                          onBlur={() => {
-                            if (skipBlurCommitRef.current) {
-                              skipBlurCommitRef.current = false;
-                              return;
-                            }
+                            startEditing(
+                              row.id,
+                              cell.column.id,
+                              cell.getValue() as string | number | null,
+                            );
+                          } else {
+                            setSelectedCell({
+                              rowId: row.id,
+                              columnId: cell.column.id,
+                            });
+                            setEditingCell(null);
+                          }
+                        }}
+                      >
+                        <div className="flex h-full w-full items-center">
+                          {isEditingCell ? (
+                            <input
+                              autoFocus
+                              className="w-full bg-transparent outline-none"
+                              type={
+                                getColumnMeta(cell.column.id)?.type === "number"
+                                  ? "number"
+                                  : "text"
+                              }
+                              value={editingCell?.draftValue ?? ""}
+                              onChange={(e) => {
+                                const { value } = e.target;
 
-                            finishEditing("submit");
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                                setEditingCell((current) => {
+                                  if (!current) {
+                                    return current;
+                                  }
+
+                                  if (
+                                    current.rowId !== row.id ||
+                                    current.columnId !== cell.column.id
+                                  ) {
+                                    return current;
+                                  }
+
+                                  return {
+                                    ...current,
+                                    draftValue: value,
+                                  };
+                                });
+
+                                setSelectedCell({
+                                  rowId: row.id,
+                                  columnId: cell.column.id,
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  skipBlurCommitRef.current = true;
+                                  finishEditing("submit");
+                                }
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  skipBlurCommitRef.current = true;
+                                  finishEditing("cancel");
+                                }
+                              }}
+                              onBlur={() => {
+                                if (skipBlurCommitRef.current) {
+                                  skipBlurCommitRef.current = false;
+                                  return;
+                                }
+
+                                finishEditing("submit");
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-
-            {tableData?.columns && (
-              <ATAddRow
-                tableId={tableId}
-                viewId={viewId}
-                columns={tableData.columns}
-                refetch={async () => {
-                  await refetch();
-                }}
-              />
-            )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
 

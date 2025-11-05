@@ -81,6 +81,7 @@ export default async function addNewTable(
           [notesId]: "JS Dev.",
           [numberOfPrsId]: 5,
         },
+        insertionOrder: 1,
       },
     ]);
 

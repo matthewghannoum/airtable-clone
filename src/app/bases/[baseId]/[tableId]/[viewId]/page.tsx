@@ -8,9 +8,5 @@ export default async function Page(
   // Uncomment below to add a 5 second delay to test loading ui
   // await new Promise((resolve) => setTimeout(resolve, 5000));
 
-  return (
-    <div className="h-full w-full">
-      <Airtable tableId={tableId} viewId={viewId} />
-    </div>
-  );
+  return <Airtable tableId={tableId} viewId={viewId} />;
 }

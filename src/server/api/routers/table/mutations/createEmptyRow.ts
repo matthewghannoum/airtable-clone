@@ -1,7 +1,8 @@
 import { protectedProcedure } from "@/server/api/trpc";
 import { airtableColumns, airtableRows } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import z from "zod";
+import getMaxInsertionOrder from "../utils/getMaxInsertOrder";
 
 const createEmptyRow = protectedProcedure
   .input(
@@ -25,6 +26,7 @@ const createEmptyRow = protectedProcedure
       .insert(airtableRows)
       .values({
         id: input.rowId,
+        insertionOrder: (await getMaxInsertionOrder(ctx.db, input.tableId)) + 1,
         airtableId: input.tableId,
         values,
       })
