@@ -34,8 +34,10 @@ const addRandomRows = protectedProcedure
 
     const randomRowsBatches: Record<string, string | number>[][] = [[]];
 
+    const batchSize = 10000;
+
     for (let i = 1; i <= numRows; i++) {
-      if (i % 10000 === 0) randomRowsBatches.push([]);
+      if (i % batchSize === 0) randomRowsBatches.push([]);
 
       const randomRow: Record<string, string | number> = {};
 
@@ -64,12 +66,12 @@ const addRandomRows = protectedProcedure
 
     const maxInsertionOrder = await getMaxInsertionOrder(ctx.db, tableId);
 
-    for (const randomRows of randomRowsBatches) {
+    for (const [i, randomRows] of randomRowsBatches.entries()) {
       await ctx.db.insert(airtableRows).values(
         randomRows.map((randomRow, index) => ({
           values: randomRow,
           airtableId: tableId,
-          insertionOrder: maxInsertionOrder + index + 1,
+          insertionOrder: batchSize * i + maxInsertionOrder + index + 1,
         })),
       );
     }
