@@ -324,12 +324,12 @@ export default function Airtable({
     fetchMoreOnBottomReached(tableContainerRef.current);
   }, [fetchMoreOnBottomReached]);
 
-  const { rows } = table.getRowModel();
+  const rows = [...table.getRowModel().rows, null]; // last null element is for add row button
 
   // TODO: move tablebody and this virualizer to a lower order component to avoid rerendering the virtualizer
   // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
   const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
-    count: rows.length + 1,
+    count: rows.length,
     estimateSize: () => 36, // estimate row height for accurate scrollbar dragging
     getScrollElement: () => tableContainerRef.current,
     // measure dynamic row height, except in firefox because it measures table border height incorrectly
@@ -382,7 +382,7 @@ export default function Airtable({
               const rowIndex = virtualRow.index;
               const row = rows[rowIndex];
 
-              if (rowIndex === totalFetched - 1 && tableData?.columns)
+              if (!row && tableData?.columns)
                 return (
                   <ATAddRow
                     key={rowIndex}
