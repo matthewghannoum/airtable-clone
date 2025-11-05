@@ -35,11 +35,11 @@ const getTableByView = protectedProcedure
       .where(eq(airtableColumns.airtableId, input.tableId));
 
     const columns = viewSettings.map(
-      ({ at_column: col, view_sorts, view_displays }) => {
-        const displayOrderNum = view_displays?.displayOrderNum ?? 0;
-        const isHidden = view_displays?.isHidden ?? false;
+      ({ at_column: col, view_sort, view_display }) => {
+        const displayOrderNum = view_display?.displayOrderNum ?? 0;
+        const isHidden = view_display?.isHidden ?? false;
 
-        if (!view_sorts)
+        if (!view_sort)
           return {
             ...col,
             sortOrder: null,
@@ -48,7 +48,7 @@ const getTableByView = protectedProcedure
             isHidden,
           };
 
-        const { sortOrder, sortPriority } = view_sorts;
+        const { sortOrder, sortPriority } = view_sort;
 
         return {
           ...col,
