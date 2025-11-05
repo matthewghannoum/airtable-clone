@@ -27,7 +27,7 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     IS_CREDENTIALS_PROVIDER: z.enum(["true", "false"]).default("false"),
-    ADMIN_USERS: z.string(),
+    ADMIN_USERS: z.string().optional(),
   },
 
   /**

@@ -14,7 +14,7 @@ const addRandomRows = protectedProcedure
     }),
   )
   .mutation(async ({ ctx, input: { tableId, numRows } }) => {
-    const adminUsers = env.ADMIN_USERS.split(", ");
+    const adminUsers = env.ADMIN_USERS?.split(", ") ?? [];
 
     const userEmail = ctx.session.user.email;
 
