@@ -15,6 +15,8 @@ import ATAddCol from "./ATAddCol";
 import TableFnRow from "./TableFnRow";
 import ATViewsBar from "./ATViewsBar";
 
+const limit = 100;
+
 export default function Airtable({
   tableId,
   viewId,
@@ -26,15 +28,14 @@ export default function Airtable({
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
-  const { data, fetchNextPage, isFetching, isLoading } =
-    api.table.get.useInfiniteQuery(
-      {
-        tableId,
-        viewId,
-        limit: 100,
-      },
-      { getNextPageParam: (lastPage) => lastPage.nextCursor },
-    );
+  const { data, fetchNextPage, isFetching } = api.table.get.useInfiniteQuery(
+    {
+      tableId,
+      viewId,
+      limit,
+    },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  );
 
   const tableData = useMemo(() => {
     const columns = data?.pages[0]?.columns ?? [];
@@ -242,28 +243,35 @@ export default function Airtable({
       const { rowId, columnId, cellValue } = input;
 
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId, viewId });
+      await utils.table.get.cancel({ tableId, viewId, limit });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId, viewId });
+      const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
+
+      console.log("prev", prev);
 
       // 3) update cache optimistically
       if (prev) {
-        const newRows = prev.rows.map((row, index) => {
-          if (rowId === rowIds[index]) {
-            return {
-              ...row,
-              [columnId]: cellValue,
-            };
-          }
-          return row;
-        });
+        utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
+          if (!old) return { pages: [], pageParams: [] };
 
-        utils.table.get.setData({ tableId, viewId }, () => ({
-          columns: prev.columns,
-          rows: newRows,
-          rowIds: prev.rowIds,
-        }));
+          return {
+            ...old,
+            pages:
+              old?.pages.map((page) => ({
+                ...page,
+                rows: page.rows.map((row, index) => {
+                  if (rowId === rowIds[index]) {
+                    return {
+                      ...row,
+                      [columnId]: cellValue,
+                    };
+                  }
+                  return row;
+                }),
+              })) ?? [],
+          };
+        });
       }
 
       // 4) pass snapshot to error handler for rollback
@@ -271,7 +279,10 @@ export default function Airtable({
     },
     onError: (err, newTodo, context) => {
       if (context?.prev) {
-        utils.table.get.setData({ tableId, viewId }, context.prev);
+        utils.table.get.setInfiniteData(
+          { tableId, viewId, limit },
+          context.prev,
+        );
       }
     },
     // Always refetch after error or success:
