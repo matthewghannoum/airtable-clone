@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EyeOff, Tally5, TextInitial } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/trpc/react";
+import { limit } from "..";
 
 export default function HideTool({
   tableId,
@@ -23,20 +24,28 @@ export default function HideTool({
   const updateIsHiddenColumn = api.table.updateIsHiddenColumn.useMutation({
     onMutate: async ({ viewId, columnId, isHidden }) => {
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId, viewId });
+      await utils.table.get.cancel({ tableId, viewId, limit });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getData({ tableId, viewId });
+      const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
 
       // 3) update cache optimistically
       if (prev) {
-        utils.table.get.setData({ tableId, viewId }, () => ({
-          ...prev,
-          columns: prev.columns.map((column) => {
-            if (column.id === columnId) return { ...column, isHidden };
-            return column;
-          }),
-        }));
+        utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
+          if (!old) return { pages: [], pageParams: [] };
+
+          return {
+            ...old,
+            pages:
+              old?.pages.map((page) => ({
+                ...page,
+                columns: page.columns.map((column) => {
+                  if (column.id === columnId) return { ...column, isHidden };
+                  return column;
+                }),
+              })) ?? [],
+          };
+        });
       }
 
       // 4) pass snapshot to error handler for rollback

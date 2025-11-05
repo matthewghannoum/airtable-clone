@@ -8,7 +8,14 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ATHeader from "./ATHeader";
 import ATAddRow from "./ATAddRow";
 import ATAddCol from "./ATAddCol";
@@ -386,7 +393,7 @@ export default function Airtable({
                   />
                 );
 
-              if (!row) return <></>;
+              if (!row) return <Fragment key={rowIndex}></Fragment>;
 
               return (
                 <TableRow
@@ -413,7 +420,7 @@ export default function Airtable({
                         (col) => col.id === cell.column.id,
                       )?.isHidden
                     )
-                      return <></>;
+                      return <Fragment key={cell.id}></Fragment>;
 
                     return (
                       <TableCell
