@@ -305,7 +305,6 @@ export default function Airtable({
 
   // a check on mount and after a fetch to see if the table is already scrolled to the bottom and immediately needs to fetch more data
   useEffect(() => {
-    console.log("remounting fetchMoreOnBottomReached");
     fetchMoreOnBottomReached(tableContainerRef.current);
   }, [fetchMoreOnBottomReached]);
 
@@ -315,15 +314,18 @@ export default function Airtable({
   // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
   const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
     count: rows.length,
-    estimateSize: () => 37, //estimate row height for accurate scrollbar dragging
+    estimateSize: () => 36, // estimate row height for accurate scrollbar dragging
     getScrollElement: () => tableContainerRef.current,
-    //measure dynamic row height, except in firefox because it measures table border height incorrectly
+    // measure dynamic row height, except in firefox because it measures table border height incorrectly
     measureElement:
       typeof window !== "undefined" && navigator.userAgent.includes("Firefox")
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
-    overscan: 5,
+    overscan: 50,
   });
+
+  // Create % widths once, reuse everywhere
+  const colWidthPercentage = `calc(48px-${100 / tableData.columns.length}%)`;
 
   return (
     <div className="h-full w-full">
@@ -347,13 +349,16 @@ export default function Airtable({
 
         <Table className="h-full w-full border-collapse bg-white">
           {tableData?.columns && (
-            <ATHeader table={table} columns={tableData.columns} />
+            <ATHeader
+              table={table}
+              columns={tableData.columns}
+              colWidthPercentage={colWidthPercentage}
+            />
           )}
 
           <TableBody
             className="relative border-b border-neutral-300"
             style={{
-              // display: "grid",
               height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
             }}
           >
@@ -366,13 +371,16 @@ export default function Airtable({
               return (
                 <TableRow
                   key={rowIndex}
+                  className="flex w-full"
                   style={{
                     position: "absolute",
                     transform: `translateY(${virtualRow.start}px)`, // this should always be a `style` as it changes on scroll
                   }}
                 >
-                  <TableCell className="h-9">
-                    <p className="ml-1">{rowIndex + 1}</p>
+                  <TableCell className="h-9 max-w-12 flex-none">
+                    <div className="flex h-full items-center pr-6">
+                      <p className="ml-1">{rowIndex + 1}</p>
+                    </div>
                   </TableCell>
 
                   {row.getVisibleCells().map((cell) => {
@@ -390,7 +398,7 @@ export default function Airtable({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`h-9 w-48 max-w-48 overflow-x-auto border-r border-neutral-300 ${
+                        className={`h-9 w-full flex-1 overflow-x-auto border-r border-neutral-300 ${
                           isEditingCell
                             ? "border-2 border-blue-500 bg-white"
                             : selectedCell?.rowId === row.id &&
@@ -398,6 +406,7 @@ export default function Airtable({
                               ? "border-2 border-blue-400 bg-white"
                               : ""
                         }`}
+                        style={{ flex: `0 0 ${colWidthPercentage}` }}
                         onClick={() => {
                           if (
                             selectedCell?.rowId === row.id &&
@@ -421,73 +430,75 @@ export default function Airtable({
                           }
                         }}
                       >
-                        {isEditingCell ? (
-                          <input
-                            autoFocus
-                            className="w-full bg-transparent outline-none"
-                            type={
-                              getColumnMeta(cell.column.id)?.type === "number"
-                                ? "number"
-                                : "text"
-                            }
-                            value={editingCell?.draftValue ?? ""}
-                            onChange={(e) => {
-                              const { value } = e.target;
+                        <div className="flex h-full w-full items-center">
+                          {isEditingCell ? (
+                            <input
+                              autoFocus
+                              className="w-full bg-transparent outline-none"
+                              type={
+                                getColumnMeta(cell.column.id)?.type === "number"
+                                  ? "number"
+                                  : "text"
+                              }
+                              value={editingCell?.draftValue ?? ""}
+                              onChange={(e) => {
+                                const { value } = e.target;
 
-                              setEditingCell((current) => {
-                                if (!current) {
-                                  return current;
+                                setEditingCell((current) => {
+                                  if (!current) {
+                                    return current;
+                                  }
+
+                                  if (
+                                    current.rowId !== row.id ||
+                                    current.columnId !== cell.column.id
+                                  ) {
+                                    return current;
+                                  }
+
+                                  return {
+                                    ...current,
+                                    draftValue: value,
+                                  };
+                                });
+
+                                setSelectedCell({
+                                  rowId: row.id,
+                                  columnId: cell.column.id,
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  skipBlurCommitRef.current = true;
+                                  finishEditing("submit");
+                                }
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  skipBlurCommitRef.current = true;
+                                  finishEditing("cancel");
+                                }
+                              }}
+                              onBlur={() => {
+                                if (skipBlurCommitRef.current) {
+                                  skipBlurCommitRef.current = false;
+                                  return;
                                 }
 
-                                if (
-                                  current.rowId !== row.id ||
-                                  current.columnId !== cell.column.id
-                                ) {
-                                  return current;
-                                }
-
-                                return {
-                                  ...current,
-                                  draftValue: value,
-                                };
-                              });
-
-                              setSelectedCell({
-                                rowId: row.id,
-                                columnId: cell.column.id,
-                              });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                skipBlurCommitRef.current = true;
                                 finishEditing("submit");
-                              }
-                              if (e.key === "Escape") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                skipBlurCommitRef.current = true;
-                                finishEditing("cancel");
-                              }
-                            }}
-                            onBlur={() => {
-                              if (skipBlurCommitRef.current) {
-                                skipBlurCommitRef.current = false;
-                                return;
-                              }
-
-                              finishEditing("submit");
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full">
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
-                          </div>
-                        )}
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                     );
                   })}
@@ -495,7 +506,7 @@ export default function Airtable({
               );
             })}
 
-            {tableData?.columns && (
+            {/*{tableData?.columns && (
               <ATAddRow
                 tableId={tableId}
                 viewId={viewId}
@@ -504,7 +515,7 @@ export default function Airtable({
                   await refetch();
                 }}
               />
-            )}
+            )}*/}
           </TableBody>
         </Table>
 
