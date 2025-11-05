@@ -1,5 +1,5 @@
 {
-  "id": "70bdc338-e906-4e05-afa3-00b892294d75",
+  "id": "03b00e02-1a39-4dff-b606-5ebb1964e88c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -144,12 +144,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "displayOrderNum": {
-          "name": "displayOrderNum",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "airtableId": {
           "name": "airtableId",
           "type": "uuid",
@@ -190,6 +184,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
+        "insertionOrder": {
+          "name": "insertionOrder",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "values": {
           "name": "values",
           "type": "jsonb",
@@ -215,6 +215,52 @@
         "airtable-clone_at_row_airtableId_airtable-clone_airtable_id_fk": {
           "name": "airtable-clone_at_row_airtableId_airtable-clone_airtable_id_fk",
           "tableFrom": "airtable-clone_at_row",
+          "tableTo": "airtable-clone_airtable",
+          "columnsFrom": [
+            "airtableId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.airtable-clone_at_view": {
+      "name": "airtable-clone_at_view",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "airtableId": {
+          "name": "airtableId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "airtable-clone_at_view_airtableId_airtable-clone_airtable_id_fk": {
+          "name": "airtable-clone_at_view_airtableId_airtable-clone_airtable_id_fk",
+          "tableFrom": "airtable-clone_at_view",
           "tableTo": "airtable-clone_airtable",
           "columnsFrom": [
             "airtableId"
@@ -463,6 +509,149 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.airtable-clone_view_display": {
+      "name": "airtable-clone_view_display",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "viewId": {
+          "name": "viewId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "columnId": {
+          "name": "columnId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "displayOrderNum": {
+          "name": "displayOrderNum",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isHidden": {
+          "name": "isHidden",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "airtable-clone_view_display_viewId_airtable-clone_at_view_id_fk": {
+          "name": "airtable-clone_view_display_viewId_airtable-clone_at_view_id_fk",
+          "tableFrom": "airtable-clone_view_display",
+          "tableTo": "airtable-clone_at_view",
+          "columnsFrom": [
+            "viewId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "airtable-clone_view_display_columnId_airtable-clone_at_column_id_fk": {
+          "name": "airtable-clone_view_display_columnId_airtable-clone_at_column_id_fk",
+          "tableFrom": "airtable-clone_view_display",
+          "tableTo": "airtable-clone_at_column",
+          "columnsFrom": [
+            "columnId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.airtable-clone_view_sort": {
+      "name": "airtable-clone_view_sort",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "viewId": {
+          "name": "viewId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "columnId": {
+          "name": "columnId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sortOrder": {
+          "name": "sortOrder",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sortPriority": {
+          "name": "sortPriority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "airtable-clone_view_sort_viewId_airtable-clone_at_view_id_fk": {
+          "name": "airtable-clone_view_sort_viewId_airtable-clone_at_view_id_fk",
+          "tableFrom": "airtable-clone_view_sort",
+          "tableTo": "airtable-clone_at_view",
+          "columnsFrom": [
+            "viewId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "airtable-clone_view_sort_columnId_airtable-clone_at_column_id_fk": {
+          "name": "airtable-clone_view_sort_columnId_airtable-clone_at_column_id_fk",
+          "tableFrom": "airtable-clone_view_sort",
+          "tableTo": "airtable-clone_at_column",
+          "columnsFrom": [
+            "columnId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

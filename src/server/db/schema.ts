@@ -123,7 +123,7 @@ export const airtableViews = createTable("at_view", (d) => ({
     .references(() => airtables.id),
 }));
 
-export const viewSorts = createTable("view_sorts", (d) => ({
+export const viewSorts = createTable("view_sort", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
   viewId: d
     .uuid()
@@ -137,7 +137,7 @@ export const viewSorts = createTable("view_sorts", (d) => ({
   sortPriority: d.integer().notNull(),
 }));
 
-export const viewDisplaySettings = createTable("view_displays", (d) => ({
+export const viewDisplaySettings = createTable("view_display", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
   viewId: d
     .uuid()
