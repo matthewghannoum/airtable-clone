@@ -375,21 +375,18 @@ export default function Airtable({
               const rowIndex = virtualRow.index;
               const row = rows[rowIndex];
 
-              if (rowIndex === rowVirtualizer.getVirtualItems().length - 1)
+              if (
+                rowIndex === rowVirtualizer.getVirtualItems().length - 1 &&
+                tableData?.columns
+              )
                 return (
-                  <>
-                    {tableData?.columns && (
-                      <ATAddRow
-                        tableId={tableId}
-                        viewId={viewId}
-                        columns={tableData.columns}
-                        virtualRowStart={virtualRow.start}
-                        // refetch={async () => {
-                        //   await refetch();
-                        // }}
-                      />
-                    )}
-                  </>
+                  <ATAddRow
+                    key={rowIndex}
+                    tableId={tableId}
+                    viewId={viewId}
+                    columns={tableData.columns}
+                    virtualRowStart={virtualRow.start}
+                  />
                 );
 
               if (!row) return <></>;
