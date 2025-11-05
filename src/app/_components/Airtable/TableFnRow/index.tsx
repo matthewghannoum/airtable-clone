@@ -17,7 +17,7 @@ export default function TableFnRow({
   toggleViewsBar: () => void;
 }) {
   return (
-    <div className="flex w-full items-center justify-between gap-1 border-t border-b border-neutral-300 p-1">
+    <div className="flex w-full items-center justify-between gap-1 border-b border-neutral-300 p-1">
       <Menu
         className="ml-3 cursor-pointer"
         size={20}
