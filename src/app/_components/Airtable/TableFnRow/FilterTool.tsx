@@ -39,6 +39,8 @@ import { api } from "@/trpc/react";
 import type { Column } from "../../types";
 import { Input } from "@/components/ui/input";
 
+type GroupOperator = "first-condition" | "and" | "or";
+
 const stringOperators = [
   "contains",
   "not-contains",
@@ -47,11 +49,14 @@ const stringOperators = [
   "is-not-empty",
 ];
 
-function getStartCondition(firstColumn: Column) {
+function getStartCondition(firstColumn: Column, isFirstCondition: boolean) {
   return {
     columnId: firstColumn.id,
     columnType: firstColumn.type,
     operator: firstColumn.type === "text" ? "contains" : "ge",
+    groupOperator: (isFirstCondition
+      ? "first-condition"
+      : "and") as GroupOperator,
     value: "",
   };
 }
@@ -74,6 +79,7 @@ export default function FilterTool({
       columnId: string;
       columnType: "text" | "number";
       operator: string;
+      groupOperator: GroupOperator;
       value: string;
     }[]
   >([]);
@@ -84,7 +90,7 @@ export default function FilterTool({
     // console.log(columnFilters.length);
 
     if (columnFilters.length === 0)
-      setColumnFilters(columns[0] ? [getStartCondition(columns[0])] : []);
+      setColumnFilters(columns[0] ? [getStartCondition(columns[0], true)] : []);
   }, [columns]);
 
   useEffect(() => console.log("columnFilters", columnFilters), [columnFilters]);
@@ -110,12 +116,50 @@ export default function FilterTool({
 
           <div className="flex w-full flex-col items-start justify-start gap-3">
             {columnFilters.map(
-              ({ columnId, columnType, operator, value: filterValue }, index) =>
+              (
+                {
+                  columnId,
+                  columnType,
+                  operator,
+                  value: filterValue,
+                  groupOperator,
+                },
+                index,
+              ) =>
                 columnId && (
                   <div
                     key={index}
                     className="flex items-center justify-start gap-2"
                   >
+                    {groupOperator !== "first-condition" && (
+                      <Select
+                        value={groupOperator}
+                        onValueChange={(groupOperator) => {
+                          setColumnFilters((prev) => {
+                            return prev.map((filter, currentIndex) => {
+                              if (index === currentIndex)
+                                return {
+                                  ...filter,
+                                  groupOperator: groupOperator as GroupOperator,
+                                };
+
+                              return filter;
+                            });
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="w-full min-w-48">
+                          <SelectValue placeholder="Group" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          <SelectItem value="and">and</SelectItem>
+
+                          <SelectItem value="or">or</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+
                     <Select
                       value={columnId}
                       onValueChange={(columnId) =>
@@ -127,6 +171,7 @@ export default function FilterTool({
 
                             if (index === currentIndex)
                               return {
+                                ...filter,
                                 columnId,
                                 columnType,
                                 operator:
@@ -238,7 +283,7 @@ export default function FilterTool({
               onClick={() =>
                 setColumnFilters((prev) => [
                   ...prev,
-                  getStartCondition(columns[0]!),
+                  getStartCondition(columns[0]!, false),
                 ])
               }
             >
