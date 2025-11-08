@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { auth } from "@/server/auth";
+import { auth, signIn } from "@/server/auth";
 import { redirect } from "next/navigation";
 
 type SignInPageProps = {
@@ -41,13 +41,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const callbackUrl = Array.isArray(callbackParam) ? callbackParam[0] : callbackParam;
   const errorParam = searchParams?.error;
   const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
-  const googleSignInParams = new URLSearchParams();
-  if (callbackUrl) {
-    googleSignInParams.set("callbackUrl", callbackUrl);
-  }
-  const googleSignInUrl = `/api/auth/signin/google${
-    googleSignInParams.size > 0 ? `?${googleSignInParams.toString()}` : ""
-  }`;
+  const handleGoogleSignIn = async () => {
+    "use server";
+
+    await signIn("google", {
+      redirectTo: callbackUrl ?? "/bases",
+    });
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-10 text-zinc-900">
@@ -69,13 +69,15 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </div>
 
         <div className="mt-10 flex flex-col gap-6">
-          <a
-            href={googleSignInUrl}
-            className="flex items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
-          >
-            {googleIcon}
-            Sign in with Google
-          </a>
+          <form action={handleGoogleSignIn} className="w-full">
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+            >
+              {googleIcon}
+              Sign in with Google
+            </button>
+          </form>
 
           {error && (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-600">
