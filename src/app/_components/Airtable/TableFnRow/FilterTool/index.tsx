@@ -9,16 +9,86 @@ import { useEffect } from "react";
 import type { Column } from "../../../types";
 import { useConditions } from "./ConditionsStore";
 import ConditionGroup from "./ConditionGroup";
+import type { ConditionTree, Filters } from "./types";
+import { api } from "@/trpc/react";
+
+// function groupHasFilter(conditionTree: ConditionTree, groupId: string) {
+//   const { conditions } = conditionTree[groupId]!;
+
+//   const filters = conditions.filter(
+//     (condition) => !condition.includes("group-id:"),
+//   );
+
+//   if (filters.length > 0) return true;
+
+//   const groups = conditions.filter((condition) =>
+//     condition.includes("group-id:"),
+//   );
+
+//   for (const groupId of groups) {
+//     return groupHasFilter(conditionTree, groupId);
+//   }
+
+//   return false;
+// }
+
+// function getCompletedConditions(
+//   conditionTree: ConditionTree,
+//   filters: Filters,
+// ) {
+//   const completedFilters = Object.fromEntries(
+//     Object.entries(filters).filter(
+//       ([_, filter]) =>
+//         filter.value !== "" ||
+//         filter.operator === "is-empty" ||
+//         filter.operator === "is-not-empty",
+//     ),
+//   );
+
+//   const removeGroupIds: string[] = [];
+
+//   for (const groupId of Object.keys(conditionTree)) {
+//     const hasFilters = groupHasFilter(conditionTree, "root");
+
+//     // remove the group id as a condition from other condition groups
+//     if (!hasFilters) {
+//       removeGroupIds.push(groupId);
+
+//       for (const [groupId2, { conditions }] of Object.entries(conditionTree)) {
+//         if (groupId === groupId2) continue;
+
+//         conditionTree[groupId2]!.conditions = conditions.filter(
+//           (conditionId) => conditionId !== groupId,
+//         );
+//       }
+//     }
+//   }
+
+//   // remove the group id from the tree
+//   const completedContionTree = Object.fromEntries(
+//     Object.entries(conditionTree).filter(
+//       ([key]) => !removeGroupIds.includes(key),
+//     ),
+//   );
+
+//   return {
+//     completedFilters,
+//     completedContionTree,
+//   };
+// }
 
 export default function FilterTool({
-  tableId,
   viewId,
   columns,
 }: {
-  tableId: string;
   viewId: string;
   columns: Column[];
 }) {
+  const updateFilters = api.table.updateFilters.useMutation();
+
+  const conditionTree = useConditions((state) => state.conditionTree);
+  const filters = useConditions((state) => state.filters);
+
   const setColumns = useConditions((state) => state.setColumns);
   const addCondition = useConditions((state) => state.addCondition);
   const createNewConditionGroup = useConditions(
@@ -26,6 +96,15 @@ export default function FilterTool({
   );
 
   useEffect(() => setColumns(columns), [columns]);
+
+  useEffect(() => {
+    console.log("update", conditionTree, filters);
+    updateFilters.mutate({
+      viewId,
+      conditionTree,
+      filters,
+    });
+  }, [conditionTree, filters]);
 
   return (
     <Popover>

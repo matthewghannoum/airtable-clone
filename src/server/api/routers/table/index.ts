@@ -16,6 +16,8 @@ import {
 import removeSort from "./mutations/sorts/removeSort";
 import updateIsHiddenColumn from "./mutations/display/hideColumn";
 import addRandomRows from "./mutations/addRandomRows";
+import getFilters from "./mutations/filters/getFilters";
+import updateFilters from "./mutations/filters/updateFilters";
 
 export const tableRouter = createTRPCRouter({
   get: getTableByView,
@@ -33,4 +35,6 @@ export const tableRouter = createTRPCRouter({
   removeSort,
   updateIsHiddenColumn,
   addRandomRows,
+  updateFilters,
+  getFilters,
 });
