@@ -116,7 +116,11 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
             {conditionId.includes("group-id:") ? (
               <NestedCondition groupId={conditionId} depth={depth + 1} />
             ) : (
-              <Filter conditionId={conditionId} columns={columns} />
+              <Filter
+                conditionId={conditionId}
+                groupId={groupId}
+                columns={columns}
+              />
             )}
           </div>
         ))}

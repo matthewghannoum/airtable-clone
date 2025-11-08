@@ -28,4 +28,5 @@ export type ConditionsState = {
     operator?: GroupOperator,
   ) => string; // returns group id
   updateFilter: (conditionId: string, updatedCondition: Condition) => void;
+  removeFilter: (groupId: string, conditionId: string) => void;
 };

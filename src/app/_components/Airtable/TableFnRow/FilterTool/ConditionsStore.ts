@@ -67,4 +67,20 @@ export const useConditions = create<ConditionsState>()((set) => ({
       filters: { ...s.filters, [conditionId]: updatedCondition },
     }));
   },
+  removeFilter: (groupId, conditionId) => {
+    set(({ filters, conditionTree }) => ({
+      filters: Object.fromEntries(
+        Object.entries(filters).filter(([key, _]) => key !== conditionId),
+      ),
+      conditionTree: {
+        ...conditionTree,
+        [groupId]: {
+          ...conditionTree[groupId]!,
+          conditions: conditionTree[groupId]!.conditions.filter(
+            (id) => id !== conditionId,
+          ),
+        },
+      },
+    }));
+  },
 }));

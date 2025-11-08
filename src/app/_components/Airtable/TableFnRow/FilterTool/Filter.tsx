@@ -24,13 +24,17 @@ const numberOperators = ["gt", "lt"];
 
 export default function Filter({
   columns,
+  groupId,
   conditionId,
 }: {
+  groupId: string;
   conditionId: string;
   columns: Column[];
 }) {
   const filters = useConditions((state) => state.filters);
+
   const updateFilter = useConditions((state) => state.updateFilter);
+  const removeFilter = useConditions((state) => state.removeFilter);
 
   const filter = filters[conditionId]!;
   const { columnId, columnType, operator, value: filterValue } = filter;
@@ -99,7 +103,11 @@ export default function Filter({
         }}
       />
 
-      <Button variant="ghost" className="items-centerj flex justify-center">
+      <Button
+        variant="ghost"
+        className="items-centerj flex justify-center"
+        onClick={() => removeFilter(groupId, conditionId)}
+      >
         <Trash2 size={15} />
       </Button>
     </div>
