@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ListFilter } from "lucide-react";
+import { ListFilter, Plus } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -80,6 +80,30 @@ export default function FilterTool({
 
           <div className="flex w-full flex-col items-start justify-start gap-3">
             <ConditionGroup columns={columns} />
+
+            <div>
+              <Button
+                variant="ghost"
+                className="text-sm font-normal text-gray-500"
+                onClick={() => addCondition("root")}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Plus size={5} />
+                  <p>Add condition</p>
+                </div>
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="text-sm font-normal text-gray-500"
+                onClick={() => createNewConditionGroup("root")}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Plus size={5} />
+                  <p>Add condition group</p>
+                </div>
+              </Button>
+            </div>
           </div>
         </div>
       </PopoverContent>
