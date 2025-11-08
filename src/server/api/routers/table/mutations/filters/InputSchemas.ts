@@ -3,7 +3,15 @@ import z from "zod";
 export const Condition = z.object({
   columnId: z.string(),
   columnType: z.enum(["text", "number"]),
-  operator: z.string(),
+  operator: z.enum([
+    "contains",
+    "not-contains",
+    "equal-to",
+    "is-empty",
+    "is-not-empty",
+    "gt",
+    "lt",
+  ]),
   value: z.union([z.string(), z.number()]),
 });
 

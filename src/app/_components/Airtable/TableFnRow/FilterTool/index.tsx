@@ -98,12 +98,25 @@ export default function FilterTool({
   );
 
   useEffect(() => {
-    if (filterData)
-      initConditions(filterData.conditionTree, filterData.filters, columns);
+    if (filterData) {
+      if (filterData === "no filters") {
+        initConditions(columns, undefined, undefined);
+        addCondition("root");
+        return;
+      }
+
+      const { conditionTree, filters } = filterData;
+      initConditions(columns, conditionTree, filters);
+    }
   }, [filterData, columns]);
 
   useEffect(() => {
     if (isInitConditions) {
+      console.log("here1234", {
+        viewId,
+        conditionTree,
+        filters,
+      });
       updateFilters.mutate({
         viewId,
         conditionTree,

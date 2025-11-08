@@ -11,10 +11,10 @@ export const useConditions = create<ConditionsState>()((set) => ({
   //     columns,
   //   }));
   // },
-  init: (conditionTree, filters, columns) => {
-    set(() => ({
-      conditionTree,
-      filters,
+  init: (columns, conditionTree, filters) => {
+    set((s) => ({
+      conditionTree: { ...(conditionTree ?? s.conditionTree) },
+      filters: { ...(filters ?? s.filters) },
       columns,
       isInit: true,
     }));

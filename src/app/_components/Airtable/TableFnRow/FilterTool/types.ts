@@ -1,9 +1,18 @@
 import type { Column } from "../../../types";
 
+export type Operator =
+  | "contains"
+  | "not-contains"
+  | "equal-to"
+  | "is-empty"
+  | "is-not-empty"
+  | "gt"
+  | "lt";
+
 export type Condition = {
   columnId: string;
   columnType: "text" | "number";
-  operator: string;
+  operator: Operator;
   value: string | number;
 };
 
@@ -32,8 +41,8 @@ export type ConditionsState = {
   removeFilter: (groupId: string, conditionId: string) => void;
   removeConditionGroup: (groupId: string) => void;
   init: (
-    conditionTree: ConditionTree,
-    filters: Filters,
     columns: Column[],
+    conditionTree?: ConditionTree,
+    filters?: Filters,
   ) => void;
 };

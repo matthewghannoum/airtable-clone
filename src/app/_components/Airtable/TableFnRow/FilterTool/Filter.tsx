@@ -11,6 +11,7 @@ import {
 import type { Column } from "../../../types";
 import { Input } from "@/components/ui/input";
 import { useConditions } from "./ConditionsStore";
+import type { Operator } from "./types";
 
 const stringOperators = [
   "contains",
@@ -40,7 +41,7 @@ export default function Filter({
   const { columnId, columnType, operator, value: filterValue } = filter;
 
   const [updatedFilterValue, setUpdatedFilterValue] = useState<
-    string | undefined
+    string | number | undefined
   >();
 
   useEffect(() => setUpdatedFilterValue(`${filterValue}`), []);
@@ -52,7 +53,9 @@ export default function Filter({
         onValueChange={(columnId) => {
           const columnType =
             columns.find((col) => col.id === columnId)?.type ?? "text";
-          const operator = columnType === "text" ? stringOperators[0]! : "ge";
+          const operator = (
+            columnType === "text" ? stringOperators[0]! : "gt"
+          ) as Operator;
           const value = "";
 
           updateFilter(conditionId, { columnId, columnType, operator, value });
@@ -74,7 +77,10 @@ export default function Filter({
       <Select
         value={operator}
         onValueChange={(operator) => {
-          updateFilter(conditionId, { ...filter, operator });
+          updateFilter(conditionId, {
+            ...filter,
+            operator: operator as Operator,
+          });
         }}
       >
         <SelectTrigger className="w-full min-w-48">
@@ -96,7 +102,13 @@ export default function Filter({
         className="min-w-48"
         type={columnType === "text" ? "text" : "number"}
         value={updatedFilterValue}
-        onChange={(e) => setUpdatedFilterValue(e.target.value)}
+        onChange={(e) =>
+          setUpdatedFilterValue(
+            filter.columnType === "number"
+              ? Number(e.target.value)
+              : e.target.value,
+          )
+        }
         onBlur={() => {
           if (updatedFilterValue)
             updateFilter(conditionId, { ...filter, value: updatedFilterValue });

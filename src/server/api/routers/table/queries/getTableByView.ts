@@ -3,10 +3,13 @@ import {
   airtableColumns,
   airtableRows,
   viewDisplaySettings,
+  viewFilters,
   viewSorts,
 } from "@/server/db/schema";
 import { and, count, eq, sql } from "drizzle-orm";
 import z from "zod";
+import getSQLFilters from "../utils/getSQLFilters";
+import getFilterData from "../utils/getFilterData";
 
 const getTableByView = protectedProcedure
   .input(
@@ -89,13 +92,24 @@ const getTableByView = protectedProcedure
 
     const cursor = input.cursor ?? 0;
 
-    const rows = await ctx.db
+    const filterData = await getFilterData(ctx.db, input.viewId);
+
+    const sqlFilters =
+      filterData && filterData !== "no filters"
+        ? getSQLFilters(filterData.conditionTree, filterData.filters)
+        : undefined;
+
+    const rowsQuery = ctx.db
       .select({ values: airtableRows.values, id: airtableRows.id })
       .from(airtableRows)
-      .where(eq(airtableRows.airtableId, input.tableId))
+      .where(and(eq(airtableRows.airtableId, input.tableId), sqlFilters))
       .orderBy(...orderBy, airtableRows.insertionOrder)
       .offset(cursor)
       .limit(input.limit); // airtableRows.createdTimestamp
+
+    // console.log("rowsQuery.toSQL()", rowsQuery.toSQL());
+
+    const rows = await rowsQuery;
 
     const [numRows] = await ctx.db
       .select({ count: count(airtableRows) })
