@@ -1,51 +1,12 @@
 import { Button } from "@/components/ui/button";
-import {
-  ArrowDownUp,
-  CircleQuestionMark,
-  ListFilter,
-  MoveRight,
-  Plus,
-  Tally5,
-  TextInitial,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ListFilter } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import PopoverListItem from "../../../common/PopoverListItem";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Fragment,
-  useEffect,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { api } from "@/trpc/react";
+import { useEffect } from "react";
 import type { Column } from "../../../types";
-import { Input } from "@/components/ui/input";
-import type { Condition, GroupOperator } from "./types";
-import Filter from "./Filter";
 import { useConditions } from "./ConditionsStore";
 import ConditionGroup from "./ConditionGroup";
 
