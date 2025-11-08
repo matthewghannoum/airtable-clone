@@ -42,7 +42,7 @@ export default function Filter({
   useEffect(() => setUpdatedFilterValue(`${filterValue}`), []);
 
   return (
-    <div className="flex items-center justify-start gap-2">
+    <div className="flex w-full items-center justify-start gap-2">
       <Select
         value={columnId}
         onValueChange={(columnId) => {

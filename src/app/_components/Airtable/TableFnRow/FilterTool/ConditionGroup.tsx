@@ -34,7 +34,7 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
 
     return (
       <div
-        className={`flex w-full flex-col items-start justify-center gap-2 ${
+        className={`flex flex-col items-start justify-center gap-2 ${
           groupId === "root"
             ? "bg-white"
             : "rounded-sm border-1 border-gray-300 bg-gray-100 p-4"
