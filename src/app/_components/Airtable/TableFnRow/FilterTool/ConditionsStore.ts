@@ -4,6 +4,12 @@ import type { ConditionsState } from "./types";
 export const useConditions = create<ConditionsState>()((set) => ({
   conditionTree: { root: { conditions: [], groupOperator: "and" } },
   filters: {},
+  columns: [],
+  setColumns: (columns) => {
+    set(() => ({
+      columns,
+    }));
+  },
   addCondition: (groupId, condition) => {
     const conditionId = crypto.randomUUID();
 
@@ -21,11 +27,20 @@ export const useConditions = create<ConditionsState>()((set) => ({
       },
     }));
 
-    set((s) => ({
-      filters: { ...s.filters, [conditionId]: condition },
+    set(({ filters, columns }) => ({
+      filters: {
+        ...filters,
+        [conditionId]: condition ?? {
+          columnId: columns[0]?.id ?? "",
+          columnType: columns[0]?.type ?? "text",
+          operator: columns[0]?.type === "number" ? "gt" : "contains",
+          value: "",
+        },
+      },
     }));
   },
-  createNewConditionGroup: (parentGroupId, groupOperator) => {
+  createNewConditionGroup: (parentGroupId, optionalGroupOperator) => {
+    const groupOperator = optionalGroupOperator ?? "and";
     const groupId = `group-id:${crypto.randomUUID()}`;
 
     set((s) => ({

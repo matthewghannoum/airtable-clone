@@ -21,10 +21,14 @@ export default function FilterTool({
 }) {
   const conditionGroupMap = useConditions((state) => state.conditionTree);
   const filters = useConditions((state) => state.filters);
+
+  const setColumns = useConditions((state) => state.setColumns);
   const addCondition = useConditions((state) => state.addCondition);
   const createNewConditionGroup = useConditions(
     (state) => state.createNewConditionGroup,
   );
+
+  useEffect(() => setColumns(columns), [columns]);
 
   useEffect(() => {
     addCondition("root", {

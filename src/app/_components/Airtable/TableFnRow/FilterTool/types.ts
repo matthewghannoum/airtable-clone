@@ -1,3 +1,5 @@
+import type { Column } from "../../../types";
+
 export type Condition = {
   columnId: string;
   columnType: "text" | "number";
@@ -8,20 +10,22 @@ export type Condition = {
 export type GroupOperator = "and" | "or";
 
 export type ConditionGroup = {
-  conditions: string[]; // string could be a group id or condition id
+  conditions: string[]; // condition id or group id
   groupOperator: GroupOperator;
 };
 
-export type ConditionTree = Record<string, ConditionGroup>;
+export type ConditionTree = Record<string, ConditionGroup>; // node id -> group id
 export type Filters = Record<string, Condition>;
 
 export type ConditionsState = {
   conditionTree: ConditionTree;
   filters: Filters;
-  addCondition: (groupId: string, condition: Condition) => void;
+  columns: Column[];
+  setColumns: (columns: Column[]) => void;
+  addCondition: (groupId: string, condition?: Condition) => void;
   createNewConditionGroup: (
     parentGroupId: string,
-    groupOperator: GroupOperator,
+    operator?: GroupOperator,
   ) => string; // returns group id
   updateFilter: (conditionId: string, updatedCondition: Condition) => void;
 };
