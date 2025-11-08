@@ -1,33 +1,6 @@
 import { Button } from "@/components/ui/button";
-import {
-  ArrowDownUp,
-  CircleQuestionMark,
-  ListFilter,
-  MoveRight,
-  Plus,
-  Tally5,
-  TextInitial,
-  Trash2,
-  X,
-} from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import PopoverListItem from "../../../common/PopoverListItem";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Fragment,
-  useEffect,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -35,16 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { api } from "@/trpc/react";
 import type { Column } from "../../../types";
 import { Input } from "@/components/ui/input";
-import type { Condition } from "./types";
+import { useConditions } from "./ConditionsStore";
 
 const stringOperators = [
   "contains",
@@ -58,34 +24,35 @@ const numberOperators = ["gt", "lt"];
 
 export default function Filter({
   columns,
-  condition: { columnId, columnType, operator, value: filterValue },
+  conditionId,
 }: {
-  condition: Condition;
+  conditionId: string;
   columns: Column[];
 }) {
+  const filters = useConditions((state) => state.filters);
+  const updateFilter = useConditions((state) => state.updateFilter);
+
+  const filter = filters[conditionId]!;
+  const { columnId, columnType, operator, value: filterValue } = filter;
+
+  const [updatedFilterValue, setUpdatedFilterValue] = useState<
+    string | undefined
+  >();
+
+  useEffect(() => setUpdatedFilterValue(`${filterValue}`), []);
+
   return (
     <div className="flex items-center justify-start gap-2">
       <Select
         value={columnId}
-        // onValueChange={(columnId) =>
-        //   setColumnFilters((prev) => {
-        //     return prev.map((filter, currentIndex) => {
-        //       const columnType =
-        //         columns.find((col) => col.id === columnId)?.type ?? "text";
+        onValueChange={(columnId) => {
+          const columnType =
+            columns.find((col) => col.id === columnId)?.type ?? "text";
+          const operator = columnType === "text" ? stringOperators[0]! : "ge";
+          const value = "";
 
-        //       if (index === currentIndex)
-        //         return {
-        //           ...filter,
-        //           columnId,
-        //           columnType,
-        //           operator: columnType === "text" ? stringOperators[0]! : "ge",
-        //           value: "",
-        //         };
-
-        //       return filter;
-        //     });
-        //   })
-        // }
+          updateFilter(conditionId, { columnId, columnType, operator, value });
+        }}
       >
         <SelectTrigger className="w-full min-w-48">
           <SelectValue placeholder="Column type" />
@@ -102,15 +69,9 @@ export default function Filter({
 
       <Select
         value={operator}
-        // onValueChange={(operator) => {
-        //   setColumnFilters((prev) => {
-        //     return prev.map((filter, currentIndex) => {
-        //       if (index === currentIndex) return { ...filter, operator };
-
-        //       return filter;
-        //     });
-        //   });
-        // }}
+        onValueChange={(operator) => {
+          updateFilter(conditionId, { ...filter, operator });
+        }}
       >
         <SelectTrigger className="w-full min-w-48">
           <SelectValue placeholder="Column type" />
@@ -130,17 +91,12 @@ export default function Filter({
       <Input
         className="min-w-48"
         type={columnType === "text" ? "text" : "number"}
-        value={filterValue}
-        // onChange={(e) => {
-        //   setColumnFilters((prev) => {
-        //     return prev.map((filter, currentIndex) => {
-        //       if (index === currentIndex)
-        //         return { ...filter, value: e.target.value };
-
-        //       return filter;
-        //     });
-        //   });
-        // }}
+        value={updatedFilterValue}
+        onChange={(e) => setUpdatedFilterValue(e.target.value)}
+        onBlur={() => {
+          if (updatedFilterValue)
+            updateFilter(conditionId, { ...filter, value: updatedFilterValue });
+        }}
       />
 
       <Button variant="ghost" className="items-centerj flex justify-center">

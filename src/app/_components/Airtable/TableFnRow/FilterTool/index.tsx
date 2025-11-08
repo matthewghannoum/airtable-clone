@@ -58,7 +58,8 @@ export default function FilterTool({
   viewId: string;
   columns: Column[];
 }) {
-  const conditionGroupMap = useConditions((state) => state.conditionGroupMap);
+  const conditionGroupMap = useConditions((state) => state.conditionTree);
+  const filters = useConditions((state) => state.filters);
   const addCondition = useConditions((state) => state.addCondition);
   const createNewConditionGroup = useConditions(
     (state) => state.createNewConditionGroup,
@@ -66,7 +67,6 @@ export default function FilterTool({
 
   useEffect(() => {
     addCondition("root", {
-      conditionId: crypto.randomUUID(),
       columnId: "27a1f78c-5347-493e-83a2-90faae43e70e", // name
       columnType: "text",
       operator: "equal-to",
@@ -76,14 +76,12 @@ export default function FilterTool({
     const groupId = createNewConditionGroup("root", "or");
 
     addCondition(groupId, {
-      conditionId: crypto.randomUUID(),
       columnId: "a543e30d-e5c2-4149-a191-e368896f1aa0", // num prs
       columnType: "number",
       operator: "gt",
       value: 2,
     });
     addCondition(groupId, {
-      conditionId: crypto.randomUUID(),
       columnId: "81c0bf0c-1bfa-43c7-b5ed-67f20af3ed1b", // notes
       columnType: "text",
       operator: "equal-to",
@@ -92,8 +90,8 @@ export default function FilterTool({
   }, []);
 
   useEffect(
-    () => console.log("condition map", conditionGroupMap),
-    [conditionGroupMap],
+    () => console.log("condition map", conditionGroupMap, filters),
+    [conditionGroupMap, filters],
   );
 
   return (

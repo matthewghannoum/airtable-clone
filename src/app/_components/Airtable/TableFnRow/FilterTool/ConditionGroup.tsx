@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/select";
 
 export default function ConditionGroup({ columns }: { columns: Column[] }) {
-  const conditionGroupMap = useConditions((state) => state.conditionGroupMap);
+  const conditionTree = useConditions((state) => state.conditionTree);
+  const filters = useConditions((state) => state.filters);
 
   function NestedCondition({
     groupId,
@@ -19,7 +20,7 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
     groupId: string;
     depth: number;
   }) {
-    const { conditions, groupOperator } = conditionGroupMap[groupId]!;
+    const { conditions, groupOperator } = conditionTree[groupId]!;
 
     return (
       <div
@@ -29,7 +30,7 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
             : "rounded-sm border-1 border-gray-300 bg-gray-100 p-4"
         }`}
       >
-        {conditions.map((condition, index) => (
+        {conditions.map((conditionId, index) => (
           <div key={index} className="flex items-center justify-start gap-2">
             {index === 0 ? (
               <p className="min-w-24">Where</p>
@@ -47,10 +48,10 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
               </Select>
             )}
 
-            {typeof condition === "string" ? (
-              <NestedCondition groupId={condition} depth={depth + 1} />
+            {conditionId.includes("group-id:") ? (
+              <NestedCondition groupId={conditionId} depth={depth + 1} />
             ) : (
-              <Filter condition={condition} columns={columns} />
+              <Filter conditionId={conditionId} columns={columns} />
             )}
           </div>
         ))}

@@ -1,5 +1,4 @@
 export type Condition = {
-  conditionId: string;
   columnId: string;
   columnType: "text" | "number";
   operator: string;
@@ -9,17 +8,20 @@ export type Condition = {
 export type GroupOperator = "and" | "or";
 
 export type ConditionGroup = {
-  conditions: (string | Condition)[];
+  conditions: string[]; // string could be a group id or condition id
   groupOperator: GroupOperator;
 };
 
-export type ConditionGroupMap = Record<string, ConditionGroup>;
+export type ConditionTree = Record<string, ConditionGroup>;
+export type Filters = Record<string, Condition>;
 
 export type ConditionsState = {
-  conditionGroupMap: ConditionGroupMap;
+  conditionTree: ConditionTree;
+  filters: Filters;
   addCondition: (groupId: string, condition: Condition) => void;
   createNewConditionGroup: (
     parentGroupId: string,
     groupOperator: GroupOperator,
   ) => string; // returns group id
+  updateFilter: (conditionId: string, updatedCondition: Condition) => void;
 };

@@ -2,43 +2,54 @@ import { create } from "zustand";
 import type { ConditionsState } from "./types";
 
 export const useConditions = create<ConditionsState>()((set) => ({
-  conditionGroupMap: { root: { conditions: [], groupOperator: "and" } },
+  conditionTree: { root: { conditions: [], groupOperator: "and" } },
+  filters: {},
   addCondition: (groupId, condition) => {
+    const conditionId = crypto.randomUUID();
+
     // condition can be a base condition/filter or a condition group
     set((s) => ({
-      conditionGroupMap: {
-        ...s.conditionGroupMap,
+      conditionTree: {
+        ...s.conditionTree,
         [groupId]: {
           conditions: [
-            ...(s.conditionGroupMap[groupId]?.conditions ?? []),
-            condition,
+            ...(s.conditionTree[groupId]?.conditions ?? []),
+            conditionId,
           ],
-          groupOperator: s.conditionGroupMap[groupId]?.groupOperator ?? "and",
+          groupOperator: s.conditionTree[groupId]?.groupOperator ?? "and",
         },
       },
     }));
-  },
-  createNewConditionGroup: (parentGroupId, groupOperator) => {
-    const newGroupid = crypto.randomUUID();
 
     set((s) => ({
-      conditionGroupMap: {
-        ...s.conditionGroupMap,
-        [newGroupid]: {
+      filters: { ...s.filters, [conditionId]: condition },
+    }));
+  },
+  createNewConditionGroup: (parentGroupId, groupOperator) => {
+    const groupId = `group-id:${crypto.randomUUID()}`;
+
+    set((s) => ({
+      conditionTree: {
+        ...s.conditionTree,
+        [groupId]: {
           conditions: [],
           groupOperator: groupOperator,
         },
         [parentGroupId]: {
           conditions: [
-            ...(s.conditionGroupMap[parentGroupId]?.conditions ?? []),
-            newGroupid,
+            ...(s.conditionTree[parentGroupId]?.conditions ?? []),
+            groupId,
           ],
-          groupOperator:
-            s.conditionGroupMap[parentGroupId]?.groupOperator ?? "and",
+          groupOperator: s.conditionTree[parentGroupId]?.groupOperator ?? "and",
         },
       },
     }));
 
-    return newGroupid;
+    return groupId;
+  },
+  updateFilter: (conditionId, updatedCondition) => {
+    set((s) => ({
+      filters: { ...s.filters, [conditionId]: updatedCondition },
+    }));
   },
 }));
