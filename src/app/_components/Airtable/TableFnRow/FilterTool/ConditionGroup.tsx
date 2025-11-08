@@ -19,8 +19,12 @@ import {
 export default function ConditionGroup({ columns }: { columns: Column[] }) {
   const conditionTree = useConditions((state) => state.conditionTree);
   const addCondition = useConditions((state) => state.addCondition);
+
   const createNewConditionGroup = useConditions(
     (state) => state.createNewConditionGroup,
+  );
+  const removeConditionGroup = useConditions(
+    (state) => state.removeConditionGroup,
   );
 
   function NestedCondition({
@@ -79,6 +83,7 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
               <Button
                 variant="ghost"
                 className="flex items-center justify-center"
+                onClick={() => removeConditionGroup(groupId)}
               >
                 <Trash2 size={15} />
               </Button>

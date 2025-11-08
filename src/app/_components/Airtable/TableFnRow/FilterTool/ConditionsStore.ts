@@ -83,4 +83,35 @@ export const useConditions = create<ConditionsState>()((set) => ({
       },
     }));
   },
+  removeConditionGroup: (groupId) => {
+    set(({ conditionTree }) => {
+      const parentGroup = Object.entries(conditionTree).find(
+        ([treeGroupId, conditionGroup]) => {
+          if (treeGroupId === groupId) return false;
+
+          for (const id of conditionGroup.conditions) {
+            if (id === groupId) return true;
+          }
+
+          return false;
+        },
+      );
+
+      if (!parentGroup) return { conditionTree };
+
+      const [parentGroupId, _] = parentGroup;
+
+      return {
+        conditionTree: {
+          ...conditionTree,
+          [parentGroupId]: {
+            ...conditionTree[parentGroupId]!,
+            conditions: conditionTree[parentGroupId]!.conditions.filter(
+              (id) => id !== groupId,
+            ),
+          },
+        },
+      };
+    });
+  },
 }));

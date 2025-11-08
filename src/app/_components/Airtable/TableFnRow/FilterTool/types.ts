@@ -29,4 +29,5 @@ export type ConditionsState = {
   ) => string; // returns group id
   updateFilter: (conditionId: string, updatedCondition: Condition) => void;
   removeFilter: (groupId: string, conditionId: string) => void;
+  removeConditionGroup: (groupId: string) => void;
 };
