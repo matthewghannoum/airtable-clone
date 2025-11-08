@@ -22,7 +22,7 @@ import ATAddCol from "./ATAddCol";
 import TableFnRow from "./TableFnRow";
 import ATViewsBar from "./ATViewsBar";
 
-export const limit = 100;
+export const defaultLimit = 100;
 
 export default function Airtable({
   tableId,
@@ -32,6 +32,22 @@ export default function Airtable({
   viewId: string;
 }) {
   const utils = api.useUtils();
+  const [pageLimit, setPageLimit] = useState(defaultLimit);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchColumnId, setSearchColumnId] = useState<string | null>(null);
+  const [pendingDisplayOrder, setPendingDisplayOrder] = useState<number | null>(
+    null,
+  );
+  const [activeSearch, setActiveSearch] = useState<
+    { term: string; columnId: string } | null
+  >(null);
+  const [searchFeedback, setSearchFeedback] = useState<
+    "not-found" | "error" | null
+  >(null);
+  const [highlightedCell, setHighlightedCell] = useState<
+    { rowId: string; columnId: string } | null
+  >(null);
+  const [shouldScrollToHighlight, setShouldScrollToHighlight] = useState(false);
 
   // For now the entire table will be refetched
   // TODO: Create a row component that fetches and updates its own data
@@ -39,7 +55,7 @@ export default function Airtable({
     {
       tableId,
       viewId,
-      limit,
+      limit: pageLimit,
     },
     { getNextPageParam: (lastPage) => lastPage.nextCursor },
   );
@@ -74,6 +90,34 @@ export default function Airtable({
     getCoreRowModel: getCoreRowModel(),
     getRowId: (_, index) => rowIds[index] ?? index.toString(),
   });
+
+  useEffect(() => {
+    if (!tableData?.columns?.length) {
+      setSearchColumnId(null);
+      return;
+    }
+
+    const hasCurrentSelection = tableData.columns.some(
+      (column) => column.id === searchColumnId,
+    );
+
+    if (!hasCurrentSelection) {
+      setSearchColumnId(tableData.columns[0]?.id ?? null);
+    }
+  }, [tableData?.columns, searchColumnId]);
+
+  const { refetch: refetchSearch, isFetching: isSearching } =
+    api.table.searchDisplayOrder.useQuery(
+      {
+        tableId,
+        columnId: searchColumnId ?? "",
+        value: searchTerm,
+      },
+      {
+        enabled: false,
+        retry: false,
+      },
+    );
 
   const [isViewsBarHidden, setIsViewsBarHidden] = useState(true);
 
@@ -245,19 +289,110 @@ export default function Airtable({
     };
   }, [editingCell, selectedCell, table]);
 
+  const handleSearch = useCallback(async () => {
+    const columnId = searchColumnId;
+
+    if (!columnId) {
+      return;
+    }
+
+    const trimmedValue = searchTerm.trim();
+
+    if (!trimmedValue) {
+      setActiveSearch(null);
+      setHighlightedCell(null);
+      setPendingDisplayOrder(null);
+      setSearchFeedback(null);
+      setPageLimit(defaultLimit);
+      return;
+    }
+
+    setSearchFeedback(null);
+
+    const result = await refetchSearch({ throwOnError: false });
+
+    if (result.error) {
+      setActiveSearch(null);
+      setSearchFeedback("error");
+      setPendingDisplayOrder(null);
+      setHighlightedCell(null);
+      setPageLimit(defaultLimit);
+      return;
+    }
+
+    const displayOrderNumber =
+      result.data?.displayOrderNumber ?? null;
+
+    if (displayOrderNumber !== null) {
+      setActiveSearch({ term: trimmedValue, columnId });
+      setPendingDisplayOrder(displayOrderNumber);
+      setPageLimit(Math.max(defaultLimit, displayOrderNumber));
+    } else {
+      setActiveSearch(null);
+      setPendingDisplayOrder(null);
+      setHighlightedCell(null);
+      setSearchFeedback("not-found");
+      setPageLimit(defaultLimit);
+    }
+  }, [searchColumnId, searchTerm, refetchSearch]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm("");
+    setActiveSearch(null);
+    setPendingDisplayOrder(null);
+    setHighlightedCell(null);
+    setSearchFeedback(null);
+    setShouldScrollToHighlight(false);
+    setPageLimit(defaultLimit);
+  }, []);
+
+  useEffect(() => {
+    if (!activeSearch) {
+      return;
+    }
+
+    const trimmedCurrent = searchTerm.trim();
+
+    if (trimmedCurrent !== activeSearch.term) {
+      setActiveSearch(null);
+      setSearchFeedback(null);
+      setPendingDisplayOrder(null);
+      setHighlightedCell(null);
+      setShouldScrollToHighlight(false);
+    }
+  }, [searchTerm, activeSearch]);
+
+  useEffect(() => {
+    if (!activeSearch) {
+      return;
+    }
+
+    if (searchColumnId && searchColumnId !== activeSearch.columnId) {
+      setActiveSearch(null);
+      setPendingDisplayOrder(null);
+      setHighlightedCell(null);
+      setSearchFeedback(null);
+      setShouldScrollToHighlight(false);
+    }
+  }, [searchColumnId, activeSearch]);
+
   const updateCell = api.table.updateCell.useMutation({
     onMutate: async (input) => {
       const { rowId, columnId, cellValue } = input;
 
       // 1) stop outgoing refetches so we don't overwrite our optimistic change
-      await utils.table.get.cancel({ tableId, viewId, limit });
+      await utils.table.get.cancel({ tableId, viewId, limit: pageLimit });
 
       // 2) snapshot previous cache
-      const prev = utils.table.get.getInfiniteData({ tableId, viewId, limit });
+      const prev = utils.table.get.getInfiniteData({
+        tableId,
+        viewId,
+        limit: pageLimit,
+      });
 
       // 3) update cache optimistically
       if (prev) {
-        utils.table.get.setInfiniteData({ tableId, viewId, limit }, (old) => {
+        utils.table.get.setInfiniteData({ tableId, viewId, limit: pageLimit }, (old) => {
           if (!old) return { pages: [], pageParams: [] };
 
           return {
@@ -285,7 +420,7 @@ export default function Airtable({
     onError: (err, newTodo, context) => {
       if (context?.prev) {
         utils.table.get.setInfiniteData(
-          { tableId, viewId, limit },
+          { tableId, viewId, limit: pageLimit },
           context.prev,
         );
       }
@@ -296,10 +431,49 @@ export default function Airtable({
     },
   });
 
+  useEffect(() => {
+    if (!pendingDisplayOrder || !activeSearch) {
+      return;
+    }
+
+    const targetIndex = Math.max(0, pendingDisplayOrder - 1);
+    const rowId = rowIds[targetIndex];
+
+    if (!rowId) {
+      return;
+    }
+
+    if (
+      highlightedCell?.rowId === rowId &&
+      highlightedCell?.columnId === activeSearch.columnId
+    ) {
+      setShouldScrollToHighlight(true);
+      return;
+    }
+
+    setHighlightedCell({ rowId, columnId: activeSearch.columnId });
+    setShouldScrollToHighlight(true);
+  }, [
+    pendingDisplayOrder,
+    activeSearch,
+    rowIds,
+    highlightedCell,
+  ]);
+
+  useEffect(() => {
+    if (!highlightedCell) {
+      return;
+    }
+
+    if (!rowIds.includes(highlightedCell.rowId)) {
+      setHighlightedCell(null);
+    }
+  }, [rowIds, highlightedCell]);
+
   const totalFetched = tableData.rows.length;
   const totalDBRowCount = data?.pages[0]?.numRows ?? 0;
 
-  const tableContainerRef = useRef<HTMLTableElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // called on scroll and possibly on mount to fetch more data as the user scrolls and reaches bottom of table
   const fetchMoreOnBottomReached = useCallback(
@@ -328,7 +502,7 @@ export default function Airtable({
 
   // TODO: move tablebody and this virualizer to a lower order component to avoid rerendering the virtualizer
   // https://github.com/TanStack/table/blob/main/examples/react/virtualized-rows/src/main.tsx
-  const rowVirtualizer = useVirtualizer<HTMLTableElement, HTMLTableRowElement>({
+  const rowVirtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
     count: rows.length,
     estimateSize: () => 36, // estimate row height for accurate scrollbar dragging
     getScrollElement: () => tableContainerRef.current,
@@ -343,6 +517,29 @@ export default function Airtable({
   // Create % widths once, reuse everywhere
   const colWidthPercentage = `calc(48px-${100 / tableData.columns.length}%)`;
 
+  useEffect(() => {
+    if (!shouldScrollToHighlight || !highlightedCell) {
+      return;
+    }
+
+    const rowIndex = rowIds.findIndex((id) => id === highlightedCell.rowId);
+
+    if (rowIndex === -1) {
+      setShouldScrollToHighlight(false);
+      return;
+    }
+
+    if (tableContainerRef.current) {
+      const estimatedRowHeight = 36;
+      tableContainerRef.current.scrollTo({
+        top: Math.max(0, rowIndex * estimatedRowHeight - estimatedRowHeight),
+        behavior: "smooth",
+      });
+    }
+
+    setShouldScrollToHighlight(false);
+  }, [shouldScrollToHighlight, highlightedCell, rowIds]);
+
   return (
     <div className="h-full w-full">
       {tableData?.columns && (
@@ -351,6 +548,15 @@ export default function Airtable({
           viewId={viewId}
           columns={tableData.columns}
           toggleViewsBar={() => setIsViewsBarHidden(!isViewsBarHidden)}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          searchColumnId={searchColumnId}
+          onSearchColumnChange={(value) => setSearchColumnId(value)}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
+          isSearching={isSearching}
+          hasActiveSearch={Boolean(activeSearch)}
+          searchFeedback={searchFeedback}
         />
       )}
 
@@ -414,6 +620,12 @@ export default function Airtable({
                     const isEditingCell =
                       editingCell?.rowId === row.id &&
                       editingCell?.columnId === cell.column.id;
+                    const isSelectedCell =
+                      selectedCell?.rowId === row.id &&
+                      selectedCell?.columnId === cell.column.id;
+                    const isHighlightedCell =
+                      highlightedCell?.rowId === row.id &&
+                      highlightedCell?.columnId === cell.column.id;
 
                     if (
                       tableData?.columns.find(
@@ -428,16 +640,14 @@ export default function Airtable({
                         className={`h-9 w-full flex-1 overflow-x-auto border-r border-neutral-300 ${
                           isEditingCell
                             ? "border-2 border-blue-500 bg-white"
-                            : selectedCell?.rowId === row.id &&
-                                selectedCell?.columnId === cell.column.id
+                            : isSelectedCell
                               ? "border-2 border-blue-400 bg-white"
                               : ""
-                        }`}
+                        } ${isHighlightedCell ? "bg-yellow-200" : ""}`}
                         style={{ flex: `0 0 ${colWidthPercentage}` }}
                         onClick={() => {
                           if (
-                            selectedCell?.rowId === row.id &&
-                            selectedCell?.columnId === cell.column.id
+                            isSelectedCell
                           ) {
                             setSelectedCell({
                               rowId: row.id,
