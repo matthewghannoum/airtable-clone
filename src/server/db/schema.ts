@@ -137,6 +137,16 @@ export const viewSorts = createTable("view_sort", (d) => ({
   sortPriority: d.integer().notNull(),
 }));
 
+export const viewFilters = createTable("view_filter", (d) => ({
+  id: d.uuid().defaultRandom().notNull().primaryKey(),
+  viewId: d
+    .uuid()
+    .notNull()
+    .references(() => airtableViews.id),
+  conditionTree: d.jsonb().notNull(),
+  filters: d.jsonb().notNull(),
+}));
+
 export const viewDisplaySettings = createTable("view_display", (d) => ({
   id: d.uuid().defaultRandom().notNull().primaryKey(),
   viewId: d
