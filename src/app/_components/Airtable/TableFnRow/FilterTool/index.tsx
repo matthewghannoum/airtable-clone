@@ -84,26 +84,32 @@ export default function FilterTool({
   viewId: string;
   columns: Column[];
 }) {
+  const { data: filterData } = api.table.getFilters.useQuery({ viewId });
   const updateFilters = api.table.updateFilters.useMutation();
 
+  const isInitConditions = useConditions((state) => state.isInit);
   const conditionTree = useConditions((state) => state.conditionTree);
   const filters = useConditions((state) => state.filters);
 
-  const setColumns = useConditions((state) => state.setColumns);
+  const initConditions = useConditions((state) => state.init);
   const addCondition = useConditions((state) => state.addCondition);
   const createNewConditionGroup = useConditions(
     (state) => state.createNewConditionGroup,
   );
 
-  useEffect(() => setColumns(columns), [columns]);
+  useEffect(() => {
+    if (filterData)
+      initConditions(filterData.conditionTree, filterData.filters, columns);
+  }, [filterData, columns]);
 
   useEffect(() => {
-    console.log("update", conditionTree, filters);
-    updateFilters.mutate({
-      viewId,
-      conditionTree,
-      filters,
-    });
+    if (isInitConditions) {
+      updateFilters.mutate({
+        viewId,
+        conditionTree,
+        filters,
+      });
+    }
   }, [conditionTree, filters]);
 
   return (

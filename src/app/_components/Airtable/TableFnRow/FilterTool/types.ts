@@ -18,10 +18,11 @@ export type ConditionTree = Record<string, ConditionGroup>; // node id -> group 
 export type Filters = Record<string, Condition>;
 
 export type ConditionsState = {
+  isInit: boolean;
   conditionTree: ConditionTree;
   filters: Filters;
   columns: Column[];
-  setColumns: (columns: Column[]) => void;
+  // setColumns: (columns: Column[]) => void;
   addCondition: (groupId: string, condition?: Condition) => void;
   createNewConditionGroup: (
     parentGroupId: string,
@@ -30,4 +31,9 @@ export type ConditionsState = {
   updateFilter: (conditionId: string, updatedCondition: Condition) => void;
   removeFilter: (groupId: string, conditionId: string) => void;
   removeConditionGroup: (groupId: string) => void;
+  init: (
+    conditionTree: ConditionTree,
+    filters: Filters,
+    columns: Column[],
+  ) => void;
 };

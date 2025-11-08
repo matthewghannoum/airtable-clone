@@ -2,12 +2,21 @@ import { create } from "zustand";
 import type { ConditionsState } from "./types";
 
 export const useConditions = create<ConditionsState>()((set) => ({
+  isInit: false,
   conditionTree: { root: { conditions: [], groupOperator: "and" } },
   filters: {},
   columns: [],
-  setColumns: (columns) => {
+  // setColumns: (columns) => {
+  //   set(() => ({
+  //     columns,
+  //   }));
+  // },
+  init: (conditionTree, filters, columns) => {
     set(() => ({
+      conditionTree,
+      filters,
       columns,
+      isInit: true,
     }));
   },
   addCondition: (groupId, condition) => {
