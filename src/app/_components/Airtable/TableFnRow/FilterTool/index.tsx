@@ -112,11 +112,6 @@ export default function FilterTool({
 
   useEffect(() => {
     if (isInitConditions) {
-      console.log("here1234", {
-        viewId,
-        conditionTree,
-        filters,
-      });
       updateFilters.mutate({
         viewId,
         conditionTree,
