@@ -40,7 +40,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
 
   const callbackParam = resolvedSearchParams.callbackUrl;
-  const callbackUrl = Array.isArray(callbackParam) ? callbackParam[0] : callbackParam;
+  const callbackUrl = Array.isArray(callbackParam)
+    ? callbackParam[0]
+    : callbackParam;
   const errorParam = resolvedSearchParams.error;
   const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
   const handleGoogleSignIn = async () => {
@@ -63,7 +65,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             priority
           />
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">Sign in to Airtable Clone</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Sign in to Airtable Clone
+            </h1>
             <p className="text-sm text-zinc-500">
               Use your Google account to access your workspaces and bases.
             </p>
@@ -74,7 +78,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <form action={handleGoogleSignIn} className="w-full">
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+              className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
             >
               {googleIcon}
               Sign in with Google

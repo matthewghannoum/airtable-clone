@@ -36,7 +36,7 @@ export default function UserAccount({
             onClick={() => {
               void signOut({ callbackUrl: "/api/auth/signin" });
             }}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100"
+            className="w-full cursor-pointer px-4 py-2 text-left text-sm hover:bg-neutral-100"
           >
             Sign out
           </button>
