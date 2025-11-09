@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 export default function UserAccount({
@@ -31,9 +31,15 @@ export default function UserAccount({
           <p className="px-4 pt-1 pb-2 text-xs text-neutral-500">{email}</p>
 
           <div className="border-t-1 border-neutral-300" />
-          <Link href="/api/auth/signout">
-            <p className="px-4 py-2 text-sm hover:bg-neutral-100">Sign out</p>
-          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              void signOut({ callbackUrl: "/api/auth/signin" });
+            }}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-100"
+          >
+            Sign out
+          </button>
         </div>
       )}
     </>
