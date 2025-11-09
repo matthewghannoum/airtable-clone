@@ -12,14 +12,20 @@ import ConditionGroup from "./ConditionGroup";
 import { api } from "@/trpc/react";
 
 export default function FilterTool({
+  tableId,
   viewId,
   columns,
 }: {
+  tableId: string;
   viewId: string;
   columns: Column[];
 }) {
+  const utils = api.useUtils();
+
   const { data: filterData } = api.table.getFilters.useQuery({ viewId });
-  const updateFilters = api.table.updateFilters.useMutation();
+  const updateFilters = api.table.updateFilters.useMutation({
+    onSuccess: () => utils.table.get.invalidate({ tableId }),
+  });
 
   const conditionTree = useConditions((state) => state.conditionTree);
   const filters = useConditions((state) => state.filters);
