@@ -9,7 +9,6 @@ import { useEffect } from "react";
 import type { Column } from "../../../types";
 import { useConditions } from "./ConditionsStore";
 import ConditionGroup from "./ConditionGroup";
-import type { ConditionTree, Filters } from "./types";
 import { api } from "@/trpc/react";
 
 export default function FilterTool({
@@ -22,7 +21,6 @@ export default function FilterTool({
   const { data: filterData } = api.table.getFilters.useQuery({ viewId });
   const updateFilters = api.table.updateFilters.useMutation();
 
-  const isInitConditions = useConditions((state) => state.isInit);
   const conditionTree = useConditions((state) => state.conditionTree);
   const filters = useConditions((state) => state.filters);
 
@@ -34,19 +32,12 @@ export default function FilterTool({
 
   useEffect(() => {
     if (filterData) {
-      if (filterData === "no filters") {
-        initConditions(columns, undefined, undefined);
-        addCondition("root");
-        return;
-      }
-
-      const { conditionTree, filters } = filterData;
-      initConditions(columns, conditionTree, filters);
+      initConditions(columns, filterData.conditionTree, filterData.filters);
     }
   }, [filterData, columns]);
 
   useEffect(() => {
-    if (isInitConditions) {
+    if (filterData) {
       updateFilters.mutate({
         viewId,
         conditionTree,

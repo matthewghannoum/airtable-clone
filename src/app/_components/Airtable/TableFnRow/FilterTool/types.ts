@@ -27,7 +27,6 @@ export type ConditionTree = Record<string, ConditionGroup>; // node id -> group 
 export type Filters = Record<string, Condition>;
 
 export type ConditionsState = {
-  isInit: boolean;
   conditionTree: ConditionTree;
   filters: Filters;
   columns: Column[];

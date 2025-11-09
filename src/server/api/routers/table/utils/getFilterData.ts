@@ -9,7 +9,7 @@ export default async function getFilterData(db: DB, viewId: string) {
     .from(viewFilters)
     .where(eq(viewFilters.viewId, viewId));
 
-  if (!filterRow) return "no filters";
+  if (!filterRow) throw Error("Filters not instantiated.");
 
   const conditionTree = ConditionTree.parse(filterRow?.conditionTree);
   const filters = Filters.parse(filterRow?.filters);
