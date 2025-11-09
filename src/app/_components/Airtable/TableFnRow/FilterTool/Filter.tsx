@@ -101,6 +101,7 @@ export default function Filter({
       <Input
         className="min-w-48"
         type={columnType === "text" ? "text" : "number"}
+        disabled={operator === "is-empty" || operator === "is-not-empty"}
         value={updatedFilterValue}
         onChange={(e) =>
           setUpdatedFilterValue(

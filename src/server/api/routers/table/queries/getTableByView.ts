@@ -90,10 +90,9 @@ const getTableByView = protectedProcedure
 
     const filterData = await getFilterData(ctx.db, input.viewId);
 
-    const sqlFilters =
-      filterData && filterData !== "no filters"
-        ? getSQLFilters(filterData.conditionTree, filterData.filters)
-        : undefined;
+    const sqlFilters = filterData
+      ? getSQLFilters(filterData.conditionTree, filterData.filters)
+      : undefined;
 
     const rowsQuery = ctx.db
       .select({ values: airtableRows.values, id: airtableRows.id })
@@ -103,9 +102,28 @@ const getTableByView = protectedProcedure
       .offset(cursor)
       .limit(input.limit);
 
+    const fallbackRowsQuery = ctx.db
+      .select({ values: airtableRows.values, id: airtableRows.id })
+      .from(airtableRows)
+      .where(eq(airtableRows.airtableId, input.tableId))
+      .orderBy(...orderBy, airtableRows.insertionOrder)
+      .offset(cursor)
+      .limit(input.limit);
+
     // console.log("rowsQuery.toSQL()", rowsQuery.toSQL());
 
-    const rows = await rowsQuery;
+    let rows:
+      | {
+          values: Record<string, string | number | null>;
+          id: string;
+        }[]
+      | undefined = undefined;
+
+    try {
+      rows = await rowsQuery;
+    } catch {
+      rows = await fallbackRowsQuery;
+    }
 
     const [numRows] = await ctx.db
       .select({ count: count(airtableRows) })
