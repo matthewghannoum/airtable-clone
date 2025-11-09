@@ -4,6 +4,7 @@ import type { Column } from "../../types";
 import SortTool from "./SortTool";
 import HideTool from "./HideTool";
 import AddRandomRowsTool from "./AddRandomRowsTool";
+import FilterTool from "./FilterTool";
 
 export default function TableFnRow({
   tableId,
@@ -29,12 +30,7 @@ export default function TableFnRow({
 
         <HideTool tableId={tableId} columns={columns} viewId={viewId} />
 
-        <Button variant="ghost">
-          <div className="flex items-center justify-center gap-2">
-            <ListFilter size={20} />
-            <p>Filter</p>
-          </div>
-        </Button>
+        <FilterTool tableId={tableId} columns={columns} viewId={viewId} />
 
         <SortTool tableId={tableId} columns={columns} viewId={viewId} />
       </div>

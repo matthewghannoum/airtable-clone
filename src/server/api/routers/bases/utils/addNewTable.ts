@@ -4,6 +4,7 @@ import {
   airtables,
   airtableViews,
   viewDisplaySettings,
+  viewFilters,
 } from "@/server/db/schema";
 import type { DB } from "../../../types";
 
@@ -72,6 +73,12 @@ export default async function addNewTable(
       { viewId: defaultView.id, columnId: notesId, displayOrderNum: 2 },
       { viewId: defaultView.id, columnId: numberOfPrsId, displayOrderNum: 3 },
     ]);
+
+    await tx.insert(viewFilters).values({
+      viewId: defaultView.id,
+      conditionTree: { root: { conditions: [], groupOperator: "and" } },
+      filters: {},
+    });
 
     await tx.insert(airtableRows).values([
       {

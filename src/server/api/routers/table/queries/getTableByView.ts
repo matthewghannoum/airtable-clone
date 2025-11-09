@@ -7,6 +7,8 @@ import {
 } from "@/server/db/schema";
 import { and, count, eq, sql } from "drizzle-orm";
 import z from "zod";
+import getSQLFilters from "../utils/getSQLFilters";
+import getFilterData from "../utils/getFilterData";
 
 const getTableByView = protectedProcedure
   .input(
@@ -75,9 +77,6 @@ const getTableByView = protectedProcedure
           const orderExpr = sql`${baseExpr} ${sql.raw(dir)} NULLS LAST`;
           return {
             orderByComponent: orderExpr,
-            // col.sortOrder === "asc"
-            //   ? asc(orderByComponent)
-            //   : desc(orderByComponent),
             sortPriority: col.sortPriority,
           };
         }
@@ -89,13 +88,42 @@ const getTableByView = protectedProcedure
 
     const cursor = input.cursor ?? 0;
 
-    const rows = await ctx.db
+    const filterData = await getFilterData(ctx.db, input.viewId);
+
+    const sqlFilters = filterData
+      ? getSQLFilters(filterData.conditionTree, filterData.filters)
+      : undefined;
+
+    const rowsQuery = ctx.db
+      .select({ values: airtableRows.values, id: airtableRows.id })
+      .from(airtableRows)
+      .where(and(eq(airtableRows.airtableId, input.tableId), sqlFilters))
+      .orderBy(...orderBy, airtableRows.insertionOrder)
+      .offset(cursor)
+      .limit(input.limit);
+
+    const fallbackRowsQuery = ctx.db
       .select({ values: airtableRows.values, id: airtableRows.id })
       .from(airtableRows)
       .where(eq(airtableRows.airtableId, input.tableId))
       .orderBy(...orderBy, airtableRows.insertionOrder)
       .offset(cursor)
-      .limit(input.limit); // airtableRows.createdTimestamp
+      .limit(input.limit);
+
+    // console.log("rowsQuery.toSQL()", rowsQuery.toSQL());
+
+    let rows:
+      | {
+          values: Record<string, string | number | null>;
+          id: string;
+        }[]
+      | undefined = undefined;
+
+    try {
+      rows = await rowsQuery;
+    } catch {
+      rows = await fallbackRowsQuery;
+    }
 
     const [numRows] = await ctx.db
       .select({ count: count(airtableRows) })
