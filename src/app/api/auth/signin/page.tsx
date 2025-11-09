@@ -4,7 +4,7 @@ import { auth, signIn } from "@/server/auth";
 import { redirect } from "next/navigation";
 
 type SignInPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const googleIcon = (
@@ -37,9 +37,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   if (session) redirect("/bases");
 
-  const callbackParam = searchParams?.callbackUrl;
+  const resolvedSearchParams = (await searchParams) ?? {};
+
+  const callbackParam = resolvedSearchParams.callbackUrl;
   const callbackUrl = Array.isArray(callbackParam) ? callbackParam[0] : callbackParam;
-  const errorParam = searchParams?.error;
+  const errorParam = resolvedSearchParams.error;
   const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
   const handleGoogleSignIn = async () => {
     "use server";
