@@ -45,4 +45,5 @@ export type ConditionsState = {
     conditionTree?: ConditionTree,
     filters?: Filters,
   ) => void;
+  updateGroupOperator: (groudId: string, groupOperator: GroupOperator) => void;
 };

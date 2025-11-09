@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { GroupOperator } from "./types";
 
 export default function ConditionGroup({ columns }: { columns: Column[] }) {
   const conditionTree = useConditions((state) => state.conditionTree);
@@ -22,6 +23,9 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
 
   const createNewConditionGroup = useConditions(
     (state) => state.createNewConditionGroup,
+  );
+  const updateGroupOperator = useConditions(
+    (state) => state.updateGroupOperator,
   );
   const removeConditionGroup = useConditions(
     (state) => state.removeConditionGroup,
@@ -101,7 +105,12 @@ export default function ConditionGroup({ columns }: { columns: Column[] }) {
                 <p className="w-24 pl-3 text-sm">Where</p>
               </div>
             ) : index === 1 ? (
-              <Select value={groupOperator}>
+              <Select
+                value={groupOperator}
+                onValueChange={(groupOperator) =>
+                  updateGroupOperator(groupId, groupOperator as GroupOperator)
+                }
+              >
                 <SelectTrigger className="w-24">
                   <SelectValue placeholder="Group" />
                 </SelectTrigger>

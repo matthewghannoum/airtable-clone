@@ -3,7 +3,6 @@ import {
   airtableColumns,
   airtableRows,
   viewDisplaySettings,
-  viewFilters,
   viewSorts,
 } from "@/server/db/schema";
 import { and, count, eq, sql } from "drizzle-orm";
@@ -78,9 +77,6 @@ const getTableByView = protectedProcedure
           const orderExpr = sql`${baseExpr} ${sql.raw(dir)} NULLS LAST`;
           return {
             orderByComponent: orderExpr,
-            // col.sortOrder === "asc"
-            //   ? asc(orderByComponent)
-            //   : desc(orderByComponent),
             sortPriority: col.sortPriority,
           };
         }
@@ -105,7 +101,7 @@ const getTableByView = protectedProcedure
       .where(and(eq(airtableRows.airtableId, input.tableId), sqlFilters))
       .orderBy(...orderBy, airtableRows.insertionOrder)
       .offset(cursor)
-      .limit(input.limit); // airtableRows.createdTimestamp
+      .limit(input.limit);
 
     // console.log("rowsQuery.toSQL()", rowsQuery.toSQL());
 

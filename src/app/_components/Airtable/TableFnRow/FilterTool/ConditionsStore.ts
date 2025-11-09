@@ -123,4 +123,12 @@ export const useConditions = create<ConditionsState>()((set) => ({
       };
     });
   },
+  updateGroupOperator: (groupId, groupOperator) => {
+    set(({ conditionTree }) => ({
+      conditionTree: {
+        ...conditionTree,
+        [groupId]: { ...conditionTree[groupId]!, groupOperator },
+      },
+    }));
+  },
 }));
